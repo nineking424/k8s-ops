@@ -215,6 +215,20 @@ else
 
   cp "$BASE_SNIPPET" "$SNIPPET_PATH"
   echo "✓ Created snippet from base: $SNIPPET_PATH (← $(basename "$BASE_SNIPPET"))"
+
+  # 새로 만든 snippet에 hostname을 VM_NAME으로 박는다.
+  # base의 HostnameConfig 문서는 'auto: stable' 라인을 사용하는데, 이걸
+  # 'hostname: <VM_NAME>'으로 교체해 의도한 hostname으로 부팅되게 한다.
+  # (auto와 hostname은 배타이며, hostname이 명시되면 random 생성이 비활성화됨.)
+  if grep -qE '^hostname:[[:space:]]+[^#[:space:]]' "$SNIPPET_PATH"; then
+    echo "  (hostname already set in new snippet — leaving as-is)"
+  elif grep -qE '^auto:[[:space:]]+stable' "$SNIPPET_PATH"; then
+    sed -i "s|^auto: stable.*$|hostname: ${VM_NAME}|" "$SNIPPET_PATH"
+    echo "✓ Set hostname=${VM_NAME} in new snippet"
+  else
+    echo "WARNING: could not locate 'auto: stable' line; hostname not set automatically." >&2
+    echo "         Edit $SNIPPET_PATH manually if needed." >&2
+  fi
 fi
 
 # --endpoint 옵션이 주어졌으면 user.yaml의 cluster.controlPlane.endpoint를 치환

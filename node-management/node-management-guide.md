@@ -338,6 +338,8 @@ talosctl apply-config \
 
 변경 항목에 따라 자동 재부팅이 일어날 수 있습니다.
 
+> **hostname:** snippet의 `HostnameConfig` 문서에서 `auto: stable`(random 생성) 대신 `hostname: <노드명>`을 박아야 의도한 이름(예: `talos-cp-01`)으로 부팅됩니다. 02 스크립트는 새 snippet을 만들 때 자동으로 `hostname: <VM_NAME>`을 박지만, 기존 snippet을 재사용하는 노드는 거기에 박힌 hostname이 그대로 적용됩니다(수동 패치 보존).
+
 ### Talos 업그레이드
 
 ```bash
