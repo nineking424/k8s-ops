@@ -1,0 +1,36 @@
+# nfs-subdir-external-provisioner values
+# Chart: nfs-subdir-external-provisioner/nfs-subdir-external-provisioner (4.0.18)
+#
+# 백엔드 NAS는 nknas (192.168.1.4), 단일 export /volume1/nfsvolume.
+# provisioner가 PVC마다 export 하위에 디렉토리를 만들어 PV로 노출.
+
+nfs:
+  server: 192.168.1.4
+  path: /volume1/nfsvolume
+  # NFSv3 + nolock — Synology export 기본 호환. v4 이슈가 보이면 mountOptions로 조정.
+  mountOptions:
+    - nfsvers=3
+    - nolock
+
+storageClass:
+  create: true
+  # 현재 클러스터에 다른 StorageClass가 없으므로 default로 박아 PVC가 알아서 잡히게 함.
+  defaultClass: true
+  name: nfs-client
+  # provisionerName은 차트 기본값 사용 (cluster.local/<release>-nfs-subdir-external-provisioner).
+  reclaimPolicy: Delete
+  # delete 시 디렉토리를 보존하지 않고 그대로 제거. 보존이 필요해지면 archiveOnDelete=true로.
+  archiveOnDelete: false
+  allowVolumeExpansion: true
+  accessModes: ReadWriteOnce
+  # PVC 디렉토리 명: ${.PVC.namespace}-${.PVC.name}-${.PV.name} 가 차트 기본 — 그대로 사용.
+
+# 단일 replica (홈랩). 차트는 기본 1.
+replicaCount: 1
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    memory: 128Mi
