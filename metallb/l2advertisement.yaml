@@ -1,0 +1,10 @@
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: home-l2
+  namespace: metallb-system
+spec:
+  # ipAddressPools 비우면 모든 풀을 advertise. 명시적으로 home-pool에만 묶음.
+  ipAddressPools:
+    - home-pool
+  # interfaces 미지정 시 노드의 기본 인터페이스로 announce. Talos 노드의 eth0이 vmbr0(같은 L2)에 붙어 있어 그대로 OK.

@@ -1,0 +1,12 @@
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: home-pool
+  namespace: metallb-system
+spec:
+  # 노드 대역(192.168.2.x) / VIP(192.168.2.100)와 분리된 별도 대역.
+  # 라우터 DHCP 풀이 192.168.3.x를 분배하지 않는 환경 전제.
+  addresses:
+    - 192.168.3.0/24
+  autoAssign: true
+  avoidBuggyIPs: true
