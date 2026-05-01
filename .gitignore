@@ -1,0 +1,17 @@
+# values.yaml 은 시크릿 포함 가능 — 컴포넌트별로 명시 추적 (현재 metrics-server는 시크릿 없으나 컨벤션 유지)
+**/values.yaml
+
+# OS / editor 잡파일
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Talos 인증 / kubeconfig (실수로라도 들어가면 안 됨)
+talosconfig
+kubeconfig
+*.kubeconfig
+
+# 작업 부산물
+PLAN.md
+*.bak

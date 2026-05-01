@@ -1,0 +1,23 @@
+# metrics-server values
+# Chart: metrics-server/metrics-server (3.13.0)
+# Talos 클러스터용 — kubelet self-signed cert 우회 args 포함
+
+args:
+  - --kubelet-insecure-tls
+  - --kubelet-preferred-address-types=InternalIP,Hostname,ExternalIP
+  - --metric-resolution=15s
+
+# 단일 replica (테스트/홈랩). HA가 필요해지면 2 이상 + PodDisruptionBudget 활성화.
+replicas: 1
+
+# kube-system은 control plane 노드에만 두는 게 안전하지만, Talos는 cp 노드도 워크로드 허용 안 함이 기본.
+# tolerations로 cp 노드도 허용 (Helm chart 기본값 그대로 사용 — 이미 controlPlaneTaint 처리됨)
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    memory: 256Mi
+
+# Service / APIService 설정은 차트 기본값 사용
