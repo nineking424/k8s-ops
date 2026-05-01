@@ -3,16 +3,17 @@
 # Talos VM 생성 스크립트 (Proxmox)
 #
 # 사전 요구사항:
-#   - 01-gen-talos-config.sh 가 먼저 한 번 실행되어 snippets/에 역할별
-#     base 템플릿(_talos-cp-base.yaml, _talos-wk-base.yaml)이 있어야 함
+#   - 01-gen-talos-config.sh 가 먼저 실행되어 시크릿/머신컨피그가 생성됨
+#   - 02-place-base-snippets.sh 가 실행되어 snippets/에 _talos-{cp,wk}-base.yaml이 있음
 #   - Proxmox 호스트에서 root로 실행
 #
 # 동작:
 #   - <VM_NAME>-user.yaml 이 이미 있으면 그대로 사용 (수동 패치 보존)
 #   - 없으면 ROLE에 맞는 base 템플릿을 복사해 새로 생성
+#   - cp 역할이면 새 snippet에 machine.network.interfaces[] (vip 포함) 블록을 자동 삽입
 #
 # 사용법:
-#   bash 02-create-talos-vm.sh [OPTIONS] <VMID> <VM_NAME> <NODE_IP> [ROLE]
+#   bash 03-create-talos-vm.sh [OPTIONS] <VMID> <VM_NAME> <NODE_IP> [ROLE]
 #
 # 위치 인자:
 #   VMID      Proxmox VM ID (정수, 예: 106)
@@ -25,17 +26,18 @@
 #   --memory N        메모리 크기 (MiB)
 #   --disk SIZE       디스크 크기 (예: 32G, 64G)
 #   --endpoint URL    이 노드의 user.yaml에 박힌 cluster.controlPlane.endpoint
-#                     (예: https://192.168.2.200:6443) — kube-vip 같은 VIP를
-#                     쓰거나 외부 LB로 endpoint를 바꿀 때 사용. 모든 노드에
-#                     같은 값을 줘야 클러스터가 일관되게 동작합니다.
+#                     (예: https://192.168.2.200:6443) — 외부 LB로 endpoint를
+#                     바꿀 때 사용. 본 스크립트의 기본 흐름(Talos native VIP)에서는
+#                     01의 CLUSTER_VIP가 base에 이미 박혀 있어 옵션 불필요.
+#                     모든 노드에 같은 값을 줘야 클러스터가 일관되게 동작합니다.
 #
 # 예시:
-#   bash 02-create-talos-vm.sh 106 talos-cp-01 192.168.2.106 cp
-#   bash 02-create-talos-vm.sh 107 talos-cp-02 192.168.2.107 cp
-#   bash 02-create-talos-vm.sh 111 talos-wk-01  192.168.2.111 worker
-#   bash 02-create-talos-vm.sh --cpu 4 --memory 8192 --disk 64G \
+#   bash 03-create-talos-vm.sh 106 talos-cp-01 192.168.2.106 cp
+#   bash 03-create-talos-vm.sh 107 talos-cp-02 192.168.2.107 cp
+#   bash 03-create-talos-vm.sh 111 talos-wk-01  192.168.2.111 worker
+#   bash 03-create-talos-vm.sh --cpu 4 --memory 8192 --disk 64G \
 #     106 talos-cp-01 192.168.2.106 cp
-#   bash 02-create-talos-vm.sh --endpoint https://192.168.2.200:6443 \
+#   bash 03-create-talos-vm.sh --endpoint https://192.168.2.200:6443 \
 #     106 talos-cp-01 192.168.2.106 cp
 #
 
@@ -157,6 +159,10 @@ GATEWAY="192.168.1.1"
 DNS_SERVERS="1.214.68.2 1.1.1.1"
 SEARCH_DOMAIN="local"
 
+# Control plane VIP — cp 역할일 때 새 snippet에 박는 machine.network.interfaces[].vip.ip.
+# 01-gen-talos-config.sh의 CLUSTER_VIP와 동일해야 한다 (cluster endpoint와 일치).
+CP_VIP="192.168.2.100"
+
 # 역할별 리소스 (옵션으로 덮어쓸 수 있음)
 if [ "$ROLE" = "cp" ]; then
   MEMORY=4096
@@ -228,6 +234,39 @@ else
   else
     echo "WARNING: could not locate 'auto: stable' line; hostname not set automatically." >&2
     echo "         Edit $SNIPPET_PATH manually if needed." >&2
+  fi
+
+  # cp 역할이면 새 snippet에 machine.network.interfaces[] 블록을 박는다.
+  # cloud-init은 NODE_IP를 ipconfig0로 부여하지만, Talos VIP를 쓰려면 머신 컨피그에도
+  # 동일한 정적 IP를 명시한 인터페이스 항목이 있어야 한다(addresses + routes + vip).
+  # 'vip:' 키가 이미 있으면 수동 패치를 보존하기 위해 건너뜀.
+  if [ "$ROLE" = "cp" ]; then
+    if grep -qE '^[[:space:]]+vip:' "$SNIPPET_PATH"; then
+      echo "  (vip block already present — leaving as-is)"
+    else
+      python3 - "$SNIPPET_PATH" "$NODE_IP" "$NODE_CIDR" "$GATEWAY" "$CP_VIP" <<'PYEOF'
+import sys
+path, ip, cidr, gw, vip = sys.argv[1:6]
+with open(path) as f:
+    content = f.read()
+block = (
+    "    network:\n"
+    "        interfaces:\n"
+    "            - interface: eth0\n"
+    "              addresses:\n"
+    f"                  - {ip}/{cidr}\n"
+    "              routes:\n"
+    "                  - network: 0.0.0.0/0\n"
+    f"                    gateway: {gw}\n"
+    "              vip:\n"
+    f"                  ip: {vip}\n"
+)
+new = content.replace("machine:\n", "machine:\n" + block, 1)
+with open(path, "w") as f:
+    f.write(new)
+PYEOF
+      echo "✓ Inserted machine.network.interfaces[] (vip=${CP_VIP}) in new snippet"
+    fi
   fi
 fi
 

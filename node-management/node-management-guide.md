@@ -15,10 +15,11 @@
 - **Talos 버전**: v1.13.0
 - **OS 익스텐션**: `siderolabs/qemu-guest-agent` 포함
 
-다른 환경에서 사용할 때는 두 스크립트 상단의 변수를 환경에 맞게 조정하세요.
+다른 환경에서 사용할 때는 세 스크립트 상단의 변수를 환경에 맞게 조정하세요.
 
-- `01-gen-talos-config.sh`: `CLUSTER_NAME`, `CONTROL_PLANE_IP`(첫 CP IP, cluster endpoint), `TALOS_VERSION`, `STORAGE`
-- `02-create-talos-vm.sh`: `SCHEMATIC_ID`(Image Factory에서 발급), `NODE_CIDR`, `GATEWAY`, `DNS_SERVERS`, `SEARCH_DOMAIN`, 역할별 리소스(`MEMORY` / `CORES` / `DISK_SIZE`) — 리소스는 기본값이고 호출 시 `--cpu` / `--memory` / `--disk` 옵션으로 노드별 덮어쓸 수 있습니다. cluster endpoint도 `--endpoint`로 노드별 덮어쓸 수 있습니다(VIP/외부 LB용).
+- `01-gen-talos-config.sh`: `CLUSTER_NAME`, `CLUSTER_VIP`(control plane VIP, cluster endpoint), `TALOS_VERSION`. 절대 재실행 금지.
+- `02-place-base-snippets.sh`: `STORAGE`, snippets 디렉토리 경로. 멱등 — `_out/`이 갱신되면 다시 돌려도 안전.
+- `03-create-talos-vm.sh`: `SCHEMATIC_ID`(Image Factory에서 발급), `NODE_CIDR`, `GATEWAY`, `DNS_SERVERS`, `SEARCH_DOMAIN`, `CP_VIP`(cp 역할일 때 자동 삽입할 VIP), 역할별 리소스(`MEMORY` / `CORES` / `DISK_SIZE`) — 리소스는 기본값이고 호출 시 `--cpu` / `--memory` / `--disk` 옵션으로 노드별 덮어쓸 수 있습니다. cluster endpoint도 `--endpoint`로 노드별 덮어쓸 수 있습니다(VIP/외부 LB용).
 
 ## 설계 결정 요약
 
@@ -36,11 +37,11 @@
 
 ## 사전 준비
 
-`01-gen-talos-config.sh`가 다음을 자동으로 처리합니다 — 직접 실행할 필요 없음.
+01/02 스크립트가 다음을 자동으로 처리합니다 — 직접 실행할 필요 없음.
 
-- `local` 스토리지의 snippets content type 활성화 (`pvesm set local --content ...`)
-- `/var/lib/vz/snippets/` 디렉토리 생성
-- `talosctl` 설치 (없을 때만)
+- `talosctl` 설치 (01, 없을 때만)
+- `local` 스토리지의 snippets content type 활성화 (02, `pvesm set local --content ...`)
+- `/var/lib/vz/snippets/` 디렉토리 생성 (02)
 
 수동 작업으로 한 번만 해두어야 하는 건 아래 한 가지입니다.
 
@@ -52,9 +53,9 @@
 - Architecture: **amd64**
 - System Extensions: **siderolabs/qemu-guest-agent**
 
-발급받은 schematic ID(예: `ce4c980550dd2ab1b17bbf2b08801c7eb59418eafe8f279833297925d67c7515`)는 `02-create-talos-vm.sh`의 `SCHEMATIC_ID` 변수에 넣습니다.
+발급받은 schematic ID(예: `ce4c980550dd2ab1b17bbf2b08801c7eb59418eafe8f279833297925d67c7515`)는 `03-create-talos-vm.sh`의 `SCHEMATIC_ID` 변수에 넣습니다.
 
-수동으로 미리 환경을 정비하고 싶다면 다음 명령들을 참고하세요(전부 01이 알아서 합니다).
+수동으로 미리 환경을 정비하고 싶다면 다음 명령들을 참고하세요(전부 01/02가 알아서 합니다).
 
 ```bash
 # Snippets content type 활성화 + 디렉토리
@@ -70,25 +71,27 @@ chmod +x /usr/local/bin/talosctl
 
 ## 배포 워크플로우
 
-전체 작업은 두 단계로 나뉩니다.
+전체 작업은 다섯 단계로 나뉩니다.
 
 ```
-[01-gen-talos-config.sh] → snippets/에 역할별 base 템플릿 배치 (1회)
+[01-gen-talos-config.sh]      → 클러스터 시크릿/머신컨피그 생성 (1회, 절대 재실행 금지)
             ↓
-[02-create-talos-vm.sh]  → 노드별 스닙셋 자동 생성 + VM 생성/부팅 (노드마다 반복)
+[02-place-base-snippets.sh]   → snippets/에 역할별 base 템플릿 배치 (멱등, _out 갱신 시 재실행)
             ↓
-[talosctl bootstrap]     → 첫 CP에서 한 번만
+[03-create-talos-vm.sh]       → 노드별 스닙셋 자동 생성(cp는 VIP 자동 삽입) + VM 생성/부팅 (노드마다 반복)
             ↓
-[kubectl get nodes]      → 클러스터 확인
+[talosctl bootstrap]          → 첫 CP에서 한 번만
+            ↓
+[kubectl get nodes]           → 클러스터 확인
 ```
 
-### 1단계: 클러스터 컨피그 생성
+### 1단계: 클러스터 시크릿/머신컨피그 생성 (01)
 
-`01-gen-talos-config.sh`에서 클러스터 이름과 cluster endpoint(첫 CP IP)를 정의합니다. 노드 목록을 미리 등록할 필요는 없습니다.
+`01-gen-talos-config.sh`에서 클러스터 이름과 cluster endpoint(VIP)를 정의합니다. 노드 목록을 미리 등록할 필요는 없습니다.
 
 ```bash
 CLUSTER_NAME="talos-homelab"
-CONTROL_PLANE_IP="192.168.2.106"   # 첫 번째 CP 노드 IP
+CLUSTER_VIP="192.168.2.100"   # control plane VIP (cp 머신 컨피그의 vip.ip와 동일)
 ```
 
 실행:
@@ -97,23 +100,33 @@ CONTROL_PLANE_IP="192.168.2.106"   # 첫 번째 CP 노드 IP
 bash 01-gen-talos-config.sh
 ```
 
-이 단계가 끝나면 `~/talos-cluster/_out/`에 다음 파일들이 생성되고, **역할별 base 템플릿**만 snippets 디렉토리로 복사됩니다. 노드별 스닙셋은 2단계에서 자동으로 만들어집니다.
+이 단계가 끝나면 `~/talos-cluster/_out/`에 다음 파일들이 생성됩니다. base 템플릿을 snippets로 복사하는 일은 02가 따로 처리합니다(스크립트 분리: 01은 시크릿 발급이라 위험하고 02는 멱등이라 안전).
 
 ```
 ~/talos-cluster/_out/
-├── controlplane.yaml   # → snippets/_talos-cp-base.yaml
-├── worker.yaml         # → snippets/_talos-wk-base.yaml
+├── controlplane.yaml   # 02가 → snippets/_talos-cp-base.yaml 로 복사
+├── worker.yaml         # 02가 → snippets/_talos-wk-base.yaml 로 복사
 └── talosconfig         # talosctl 클라이언트 인증 (반드시 안전하게 보관)
 ```
 
 `talosconfig`는 클러스터 관리 전체 권한을 가진 인증 파일이라 분실/유출되면 클러스터 접근을 잃거나 탈취될 수 있습니다. Git에 커밋하지 말고 별도 보관소(1Password, Vault, 백업 디스크 등)에 두세요.
 
-### 2단계: VM 생성
+### 2단계: snippets에 base 배치 (02)
 
-`02-create-talos-vm.sh`는 인자 기반으로 동작합니다.
+`02-place-base-snippets.sh`는 `_out/{controlplane,worker}.yaml`을 snippets 디렉토리에 `_talos-{cp,wk}-base.yaml` 이름으로 복사하고, 필요 시 storage의 snippets content type도 활성화합니다.
 
 ```bash
-Usage: 02-create-talos-vm.sh [OPTIONS] <VMID> <VM_NAME> <NODE_IP> [ROLE]
+bash 02-place-base-snippets.sh
+```
+
+멱등 — `_out`을 갱신했을 때(예: endpoint 바꿔서 01을 다시 돌렸을 때) 다시 호출하면 base가 새로 박힙니다. 이미 만든 노드별 `<VM_NAME>-user.yaml`에는 영향이 없습니다(03이 base에서 한 번 복사한 뒤 독립 운용).
+
+### 3단계: VM 생성 (03)
+
+`03-create-talos-vm.sh`는 인자 기반으로 동작합니다.
+
+```bash
+Usage: 03-create-talos-vm.sh [OPTIONS] <VMID> <VM_NAME> <NODE_IP> [ROLE]
 
 Options:
   --cpu N           CPU 코어 수 (역할별 기본값을 덮어씀)
@@ -125,14 +138,14 @@ Options:
 CP 3대 + Worker 2대를 만드는 예시:
 
 ```bash
-# Control Plane
-bash 02-create-talos-vm.sh 106 talos-cp-01 192.168.2.106 cp
-bash 02-create-talos-vm.sh 107 talos-cp-02 192.168.2.107 cp
-bash 02-create-talos-vm.sh 108 talos-cp-03 192.168.2.108 cp
+# Control Plane (cp 역할 → 03이 자동으로 vip.ip 블록을 user.yaml에 삽입)
+bash 03-create-talos-vm.sh 106 talos-cp-01 192.168.2.106 cp
+bash 03-create-talos-vm.sh 107 talos-cp-02 192.168.2.107 cp
+bash 03-create-talos-vm.sh 108 talos-cp-03 192.168.2.108 cp
 
 # Worker
-bash 02-create-talos-vm.sh 111 talos-wk-01 192.168.2.111 worker
-bash 02-create-talos-vm.sh 112 talos-wk-02 192.168.2.112 worker
+bash 03-create-talos-vm.sh 111 talos-wk-01 192.168.2.111 worker
+bash 03-create-talos-vm.sh 112 talos-wk-02 192.168.2.112 worker
 ```
 
 `ROLE`에 따라 리소스 사양이 다르게 적용됩니다.
@@ -146,30 +159,32 @@ bash 02-create-talos-vm.sh 112 talos-wk-02 192.168.2.112 worker
 
 ```bash
 # CP에 코어/메모리/디스크를 더 크게 할당
-bash 02-create-talos-vm.sh --cpu 4 --memory 8192 --disk 64G \
+bash 03-create-talos-vm.sh --cpu 4 --memory 8192 --disk 64G \
   106 talos-cp-01 192.168.2.106 cp
 ```
 
-cluster endpoint를 노드 IP 대신 VIP나 외부 LB로 두고 싶다면 `--endpoint`를 사용하세요. 옵션은 해당 노드의 `<VM_NAME>-user.yaml`에 박힌 `cluster.controlPlane.endpoint`만 치환하므로, **모든 노드에 같은 값으로 호출해야** 클러스터가 일관되게 동작합니다.
+cluster endpoint를 다른 VIP나 외부 LB로 두고 싶다면 `--endpoint`를 사용하세요. 옵션은 해당 노드의 `<VM_NAME>-user.yaml`에 박힌 `cluster.controlPlane.endpoint`만 치환하므로, **모든 노드에 같은 값으로 호출해야** 클러스터가 일관되게 동작합니다(기본은 01의 `CLUSTER_VIP`).
 
 ```bash
-# 예: kube-vip로 192.168.2.200을 CP VIP로 쓰는 경우
+# 예: 외부 LB 192.168.2.200을 CP endpoint로 쓰는 경우
 for i in 1 2 3; do
-  bash 02-create-talos-vm.sh --endpoint https://192.168.2.200:6443 \
+  bash 03-create-talos-vm.sh --endpoint https://192.168.2.200:6443 \
     10$((i+5)) talos-cp-0${i} 192.168.2.10$((i+5)) cp
 done
 ```
 
-`base` 템플릿 자체의 endpoint를 영구히 바꾸고 싶다면 `01-gen-talos-config.sh`의 `CONTROL_PLANE_IP`를 바꾸고 01을 다시 돌리는 게 더 깔끔합니다(부트스트랩 전 한정).
+`base` 템플릿 자체의 endpoint를 영구히 바꾸고 싶다면 `01-gen-talos-config.sh`의 `CLUSTER_VIP`를 바꾸고 01→02를 다시 돌리는 게 더 깔끔합니다(부트스트랩 전 한정).
 
-`02-create-talos-vm.sh`는 호출 시 다음과 같이 동작합니다.
+`03-create-talos-vm.sh`는 호출 시 다음과 같이 동작합니다.
 
 - `<VM_NAME>-user.yaml` 스닙셋이 이미 있으면 그대로 사용 (수동으로 패치한 컨피그가 보존됩니다).
 - 없으면 `ROLE`에 맞는 base 템플릿(`_talos-cp-base.yaml` 또는 `_talos-wk-base.yaml`)을 복사해 새로 생성.
+  - cp 역할이면 새 user.yaml에 `machine.network.interfaces[]` 블록(자기 IP `/16` + 게이트웨이 + `vip.ip: ${CP_VIP}`)을 자동으로 박습니다 — VIP는 03 상단의 `CP_VIP` 변수에서 가져오며, 다른 클러스터에 재사용할 때 그 값만 바꾸면 됩니다.
+  - 모든 역할에 hostname을 노드 이름(`<VM_NAME>`)으로 박습니다.
 
-따라서 새 노드를 추가할 때 01을 다시 돌릴 필요 없이 02만 호출하면 됩니다. 노드별로 컨피그를 다르게 가져가고 싶다면, 02 실행 후 생성된 `<VM_NAME>-user.yaml`을 직접 수정한 뒤 `talosctl apply-config`로 반영하세요.
+따라서 새 노드를 추가할 때 01/02를 다시 돌릴 필요 없이 03만 호출하면 됩니다. 노드별로 컨피그를 다르게 가져가고 싶다면, 03 실행 후 생성된 `<VM_NAME>-user.yaml`을 직접 수정한 뒤 `talosctl apply-config`로 반영하세요.
 
-### 3단계: etcd 부트스트랩
+### 4단계: etcd 부트스트랩
 
 VM이 모두 부팅된 후 (약 1~2분), 첫 번째 CP 노드에서 **한 번만** etcd를 부트스트랩합니다.
 
@@ -185,7 +200,7 @@ talosctl bootstrap
 
 **중요**: `bootstrap`은 절대 두 번 이상 실행하지 마세요. etcd 데이터가 깨지고 클러스터를 복구하기 매우 어려워집니다.
 
-### 4단계: kubeconfig 추출 및 검증
+### 5단계: kubeconfig 추출 및 검증
 
 먼저 클러스터/노드 상태를 talosctl로 확인합니다.
 
@@ -237,7 +252,7 @@ qm config <VMID>
 
 EFI Disk가 Secure Boot용 키(Microsoft 등)를 미리 enroll한 상태(`pre-enrolled-keys=1`)에서 만들어졌는데 Talos `nocloud-amd64.raw`에는 secure boot 서명이 없어 펌웨어가 부팅을 거부할 때 나타납니다. `No bootable option or device was found`로 끝나고 부트 매니저 메뉴로 떨어집니다.
 
-`02-create-talos-vm.sh`는 EFI Disk를 `pre-enrolled-keys=0`으로 만들어 이 문제를 피합니다. 직접 만든 VM에서 이 에러가 보이면 EFI Disk를 다시 만드세요.
+`03-create-talos-vm.sh`는 EFI Disk를 `pre-enrolled-keys=0`으로 만들어 이 문제를 피합니다. 직접 만든 VM에서 이 에러가 보이면 EFI Disk를 다시 만드세요.
 
 ```bash
 qm stop <VMID> --skiplock 1
@@ -271,12 +286,13 @@ grep -A 1 "endpoint:" /var/lib/vz/snippets/_talos-cp-base.yaml | head -3
 
 대응은 부트스트랩 여부에 따라 다릅니다.
 
-**부트스트랩 전(아직 `talosctl bootstrap` 안 했음)**: 01을 다시 돌려 base를 재생성해도 안전합니다. 인증서/시크릿이 새로 나오지만 어차피 운영 중인 클러스터가 없습니다. 기존 노드별 user.yaml은 base와 어긋나므로 삭제하고 02를 다시 호출하세요.
+**부트스트랩 전(아직 `talosctl bootstrap` 안 했음)**: 01을 다시 돌려 시크릿/머신컨피그를 재생성해도 안전합니다. 인증서/시크릿이 새로 나오지만 어차피 운영 중인 클러스터가 없습니다. 기존 노드별 user.yaml은 새 base와 어긋나므로 삭제하고 02→03을 다시 호출하세요.
 
 ```bash
 bash 01-gen-talos-config.sh
+bash 02-place-base-snippets.sh
 rm /var/lib/vz/snippets/talos-cp-*-user.yaml /var/lib/vz/snippets/talos-wk-*-user.yaml
-# 그 후 02를 노드별로 다시 호출
+# 그 후 03을 노드별로 다시 호출
 ```
 
 **부트스트랩 후(클러스터 운영 중)**: `01-gen-talos-config.sh`를 다시 돌리면 인증서/시크릿이 통째로 새로 발급되어 **기존 클러스터를 망가뜨립니다**. 절대 하지 마세요. endpoint를 옮기려면 talosctl로 직접 컨피그를 수정합니다.
@@ -338,7 +354,7 @@ talosctl apply-config \
 
 변경 항목에 따라 자동 재부팅이 일어날 수 있습니다.
 
-> **hostname:** snippet의 `HostnameConfig` 문서에서 `auto: stable`(random 생성) 대신 `hostname: <노드명>`을 박아야 의도한 이름(예: `talos-cp-01`)으로 부팅됩니다. 02 스크립트는 새 snippet을 만들 때 자동으로 `hostname: <VM_NAME>`을 박지만, 기존 snippet을 재사용하는 노드는 거기에 박힌 hostname이 그대로 적용됩니다(수동 패치 보존).
+> **hostname:** snippet의 `HostnameConfig` 문서에서 `auto: stable`(random 생성) 대신 `hostname: <노드명>`을 박아야 의도한 이름(예: `talos-cp-01`)으로 부팅됩니다. 03 스크립트는 새 snippet을 만들 때 자동으로 `hostname: <VM_NAME>`을 박지만, 기존 snippet을 재사용하는 노드는 거기에 박힌 hostname이 그대로 적용됩니다(수동 패치 보존).
 
 ### Control Plane VIP 운영
 
@@ -361,9 +377,11 @@ talosctl --nodes <VIP_HOLDER_IP> reboot
 # 몇 초 안에 다른 cp가 VIP를 보유. kubectl get nodes는 끊기지 않아야 함.
 ```
 
-새 cp 추가 시 주의: snippet에도 동일한 `machine.network.interfaces` 블록(자기 IP `/16` + `vip.ip: 192.168.2.100`)을 박은 뒤 02 스크립트로 생성해야 합니다. base 템플릿에는 노드별 IP 자리 때문에 박지 않고, 노드별 user.yaml에만 둡니다. cluster endpoint(`cluster.controlPlane.endpoint`)는 base/user 모두 `https://192.168.2.100:6443`로 통일.
+새 cp 추가 시: 03 스크립트가 cp 역할이면 `machine.network.interfaces` 블록(자기 IP `/16` + 게이트웨이 + `vip.ip: ${CP_VIP}`)을 새 user.yaml에 자동으로 박아 줍니다 — 별도 수작업 불필요. 다른 클러스터에 재사용할 때는 03 상단의 `CP_VIP`만 그 클러스터의 VIP로 바꾸면 됩니다(01의 `CLUSTER_VIP`와 동일하게 두는 것을 전제).
 
-addresses와 cloud-init이 박는 IP가 어긋나면 인터페이스가 잠시 down될 수 있으니, patch yaml의 `addresses` 항목은 반드시 해당 노드의 정적 IP와 일치시킵니다.
+base 템플릿(`_talos-cp-base.yaml`)에는 노드별 IP 자리 때문에 `machine.network.interfaces`를 박지 않고, 03이 노드별 user.yaml을 만들 때 노드 IP를 채워 넣어 박습니다. cluster endpoint(`cluster.controlPlane.endpoint`)는 base/user 모두 `https://${CLUSTER_VIP}:6443`로 통일됩니다(01이 base에 박고, 03이 user.yaml에 그대로 복사 또는 `--endpoint`로 치환).
+
+운영 중인 cp의 user.yaml을 사후에 수정해 `apply-config`로 반영할 때는, addresses와 cloud-init이 박는 IP가 어긋나면 인터페이스가 잠시 down될 수 있으니 patch yaml의 `addresses` 항목을 반드시 해당 노드의 정적 IP와 일치시킵니다.
 
 ### Talos 업그레이드
 
@@ -403,8 +421,9 @@ talosctl etcd snapshot ~/talos-backups/etcd-$(date +%Y%m%d-%H%M%S).db \
 
 ```
 프로젝트 루트/
-├── 01-gen-talos-config.sh      # 컨피그 생성 + snippets 배치
-├── 02-create-talos-vm.sh       # VM 생성 (인자 기반, 노드마다 실행)
+├── 01-gen-talos-config.sh      # 시크릿/머신컨피그 생성 (1회, 절대 재실행 금지)
+├── 02-place-base-snippets.sh   # _out → snippets/에 base 배치 (멱등)
+├── 03-create-talos-vm.sh       # VM 생성 (인자 기반, 노드마다 실행, cp는 VIP 자동 삽입)
 └── README.md                   # 이 문서
 
 ~/talos-cluster/                # 1단계 결과물
@@ -414,9 +433,9 @@ talosctl etcd snapshot ~/talos-backups/etcd-$(date +%Y%m%d-%H%M%S).db \
     └── talosconfig             # 안전하게 보관 필수
 
 /var/lib/vz/snippets/           # cloud-init user-data
-├── _talos-cp-base.yaml         # 01이 배치하는 controlplane base 템플릿
-├── _talos-wk-base.yaml         # 01이 배치하는 worker base 템플릿
-├── talos-cp-01-user.yaml       # 02가 base에서 생성 (노드별)
+├── _talos-cp-base.yaml         # 02가 배치하는 controlplane base 템플릿
+├── _talos-wk-base.yaml         # 02가 배치하는 worker base 템플릿
+├── talos-cp-01-user.yaml       # 03이 base에서 생성 (노드별, cp는 VIP 블록 포함)
 ├── talos-cp-02-user.yaml
 ├── talos-cp-03-user.yaml
 ├── talos-wk-01-user.yaml

@@ -1,12 +1,14 @@
 #!/bin/bash
 #
-# Talos 클러스터 머신 컨피그 생성 스크립트
+# Talos 클러스터 시크릿/머신 컨피그 생성 스크립트 (한 번만 실행)
 #
-# - talosctl이 없으면 자동 설치
-# - controlplane/worker/talosconfig 생성
-# - 역할별 base 템플릿(_talos-cp-base.yaml, _talos-wk-base.yaml)을 snippets 디렉토리로 복사
-# - local 스토리지의 snippets content type 활성화 확인
-# - per-node 스닙셋은 02-create-talos-vm.sh가 ROLE에 맞춰 동적으로 생성한다
+# 동작:
+#   - talosctl이 없으면 자동 설치
+#   - talosctl gen config로 controlplane.yaml / worker.yaml / talosconfig 생성
+#   - cluster.controlPlane.endpoint를 CLUSTER_VIP로 박음
+#
+# 절대 재실행 금지 — 인증서/시크릿이 통째로 새로 발급되어 운영 중인 클러스터를 망가뜨립니다.
+# 다음 단계(snippets 배치)는 02-place-base-snippets.sh, VM 생성은 03-create-talos-vm.sh.
 #
 # 사용법: bash 01-gen-talos-config.sh
 #
@@ -15,28 +17,13 @@ set -e
 
 # ==== 변수 ====
 CLUSTER_NAME="talos-homelab"
-CONTROL_PLANE_IP="192.168.2.106"           # 첫 번째 CP 노드 IP (cluster endpoint)
+# Cluster endpoint는 control plane VIP. cp의 machine.network.interfaces[].vip.ip와 동일해야
+# 함. 03-create-talos-vm.sh가 cp 노드에 VIP 블록을 박을 때도 같은 IP를 사용한다.
+CLUSTER_VIP="192.168.2.100"
 TALOS_VERSION="v1.13.0"
 WORK_DIR="${HOME}/talos-cluster"
-SNIPPETS_DIR="/var/lib/vz/snippets"
-STORAGE="local"
-
-# 역할별 base 스닙셋 파일명. 02-create-talos-vm.sh가 ROLE에 맞춰 이 파일을
-# <VM_NAME>-user.yaml로 복사해 사용한다. VM-named 스닙셋과 충돌하지 않도록
-# '_' prefix로 네임스페이스를 분리한다.
-CP_BASE_SNIPPET="_talos-cp-base.yaml"
-WK_BASE_SNIPPET="_talos-wk-base.yaml"
 
 # ==== 0. 사전 체크 & 준비 ====
-
-# Snippets 디렉토리 생성
-mkdir -p "$SNIPPETS_DIR"
-
-# Snippets content type 활성화 확인
-if ! grep -A 5 "^dir: ${STORAGE}$" /etc/pve/storage.cfg | grep -q snippets; then
-  echo "Enabling 'snippets' content type on storage '${STORAGE}'..."
-  pvesm set "$STORAGE" --content iso,vztmpl,backup,snippets
-fi
 
 # talosctl 설치 확인
 if ! command -v talosctl &>/dev/null; then
@@ -52,41 +39,21 @@ echo "talosctl: $(talosctl version --client --short 2>/dev/null || talosctl vers
 mkdir -p "$WORK_DIR"
 cd "$WORK_DIR"
 
-# 기존 컨피그가 있으면 백업
+# 기존 컨피그가 있으면 백업 — 재실행 자체는 위험하지만, 백업은 보존해 둠
 if [ -d "_out" ]; then
   BACKUP_DIR="_out.backup.$(date +%Y%m%d_%H%M%S)"
   echo "Existing _out/ found, backing up to ${BACKUP_DIR}"
+  echo "  (재실행은 운영 클러스터를 망가뜨립니다 — 의도한 작업인지 다시 확인하세요)"
   mv _out "$BACKUP_DIR"
 fi
 
-echo "Generating cluster config: ${CLUSTER_NAME} → https://${CONTROL_PLANE_IP}:6443"
-talosctl gen config "$CLUSTER_NAME" "https://${CONTROL_PLANE_IP}:6443" \
+echo "Generating cluster config: ${CLUSTER_NAME} → https://${CLUSTER_VIP}:6443"
+talosctl gen config "$CLUSTER_NAME" "https://${CLUSTER_VIP}:6443" \
   --output-dir ./_out
 
 ls -la _out/
 
-# ==== 2. snippets 디렉토리로 base 템플릿 배치 ====
-
-echo ""
-echo "Placing base templates in ${SNIPPETS_DIR}..."
-
-cp _out/controlplane.yaml "${SNIPPETS_DIR}/${CP_BASE_SNIPPET}"
-echo "  ✓ ${SNIPPETS_DIR}/${CP_BASE_SNIPPET} (controlplane base)"
-
-cp _out/worker.yaml "${SNIPPETS_DIR}/${WK_BASE_SNIPPET}"
-echo "  ✓ ${SNIPPETS_DIR}/${WK_BASE_SNIPPET} (worker base)"
-
-# ==== 3. 검증 ====
-
-echo ""
-echo "Verifying snippets..."
-pvesm list "$STORAGE" --content snippets | grep -E "_talos-(cp|wk)-base" || true
-
-echo ""
-echo "Endpoint configured in machine config:"
-grep -A 0 "endpoint:" "${SNIPPETS_DIR}/${CP_BASE_SNIPPET}" | head -3
-
-# ==== 4. 안내 ====
+# ==== 2. 안내 ====
 
 cat <<EOF
 
@@ -95,8 +62,9 @@ cat <<EOF
 
 Files:
   Cluster configs:    ${WORK_DIR}/_out/
-  Snippets:           ${SNIPPETS_DIR}/
   talosconfig:        ${WORK_DIR}/_out/talosconfig
+
+Endpoint baked into base: https://${CLUSTER_VIP}:6443
 
 Save talosconfig path:
   export TALOSCONFIG=${WORK_DIR}/_out/talosconfig
@@ -104,8 +72,9 @@ Save talosconfig path:
   # Optional: persist to shell profile
   echo 'export TALOSCONFIG=${WORK_DIR}/_out/talosconfig' >> ~/.bashrc
 
-Next: run VM creation script
-  bash 02-create-talos-vm.sh
+Next steps:
+  1) bash 02-place-base-snippets.sh   # _out → snippets/ 로 base 배치
+  2) bash 03-create-talos-vm.sh ...   # 노드별 VM 생성
 
 ==========================================================
 EOF

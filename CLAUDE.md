@@ -12,7 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 본 프로젝트는 **노드 관리**(`node-management/`)와 **클러스터 컴포넌트**(`<component>/`)를 평면적으로 나란히 두는 구조입니다. 새로 도입하는 컴포넌트는 각자 폴더를 가지며, 폴더 안 컨벤션은 [클러스터 컴포넌트 추가](#클러스터-컴포넌트-추가) 섹션 참조.
 
-- **`node-management/`** — Talos 노드 프로비저닝/관리 스크립트와 가이드. `01-gen-talos-config.sh`(클러스터 시크릿/CA 발급 + base 템플릿 배치), `02-create-talos-vm.sh`(노드별 VM 생성), `node-management-guide.md`(부트스트랩·노드 추가·업그레이드·etcd 백업·트러블슈팅 종합 가이드). 자세한 내용은 [노드 관리](#노드-관리-node-management) 섹션 참고.
+- **`node-management/`** — Talos 노드 프로비저닝/관리 스크립트와 가이드. `01-gen-talos-config.sh`(클러스터 시크릿/CA + 머신컨피그 발급, 절대 재실행 금지), `02-place-base-snippets.sh`(`_out/` → snippets/에 base 배치, 멱등), `03-create-talos-vm.sh`(노드별 VM 생성, cp는 VIP 자동 삽입), `node-management-guide.md`(부트스트랩·노드 추가·업그레이드·etcd 백업·트러블슈팅 종합 가이드). 자세한 내용은 [노드 관리](#노드-관리-node-management) 섹션 참고.
 - **`<component>/` (예정)** — 클러스터 레벨 컴포넌트별 폴더. 도입 우선순위는 [권장 도입 순서](#권장-도입-순서) 섹션 참조 (StorageClass / LoadBalancer / Ingress / cert-manager / metric-server / 관측성 등).
 
 ## 인프라 토폴로지
@@ -27,20 +27,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **kubectl context**: `admin@talos-homelab` (현재 활성)
 - **TALOSCONFIG**: 부트스트랩을 수행한 호스트(`pve`)의 `~/talos-cluster/_out/talosconfig`. 로컬에서 `talosctl`을 쓰려면 그곳에서 가져와 `export TALOSCONFIG=...` 후 사용. 같은 디렉토리에 `controlplane.yaml`, `worker.yaml`(machine config 시드)도 함께 존재.
 - **Snippets 디렉토리**: `pve:/var/lib/vz/snippets/`
-  - `_talos-cp-base.yaml`, `_talos-wk-base.yaml` — 01이 배치한 역할별 base 템플릿
-  - `talos-cp-0{1,2,3}-user.yaml`, `talos-wk-0{1,2}-user.yaml` — 02가 base에서 만든 노드별 cloud-init user-data
+  - `_talos-cp-base.yaml`, `_talos-wk-base.yaml` — 02가 배치한 역할별 base 템플릿
+  - `talos-cp-0{1,2,3}-user.yaml`, `talos-wk-0{1,2}-user.yaml` — 03이 base에서 만든 노드별 cloud-init user-data (cp는 VIP 블록 포함)
   - cloud-init은 최초 부팅에만 동작하므로, 운영 중 노드의 컨피그를 바꾸려면 해당 user.yaml을 수정 → `talosctl apply-config`로 직접 반영
 
 ## 노드 관리 (`node-management/`)
 
-이 클러스터는 `node-management/`의 두 스크립트로 부트스트랩되었습니다. 자세한 절차·트러블슈팅은 `node-management/node-management-guide.md`에 정리되어 있고, 운영 시 **먼저 그쪽을 읽고** 여기 CLAUDE.md는 빠른 참조용으로 활용.
+이 클러스터는 `node-management/`의 세 스크립트(`01` → `02` → `03`)로 부트스트랩되었습니다. 자세한 절차·트러블슈팅은 `node-management/node-management-guide.md`에 정리되어 있고, 운영 시 **먼저 그쪽을 읽고** 여기 CLAUDE.md는 빠른 참조용으로 활용.
 
 스크립트는 **Proxmox 호스트에서 `root`로 실행**되는 것을 전제로 작성되어 있어, 로컬 macOS에서는 직접 돌릴 수 없습니다. 본 사본은 작업/검토용이고, 실제 실행은 PVE에 같은 파일을 둔 채 거기서 호출합니다.
 
 부트스트랩 시점에 박힌 핵심 변수(현재 클러스터를 그대로 다루는 한 변경 금지):
 
-- `01-gen-talos-config.sh`: `CLUSTER_NAME=talos-homelab`, `CONTROL_PLANE_IP=192.168.2.106` (`01`이 처음 만들 때 박았던 cluster endpoint — 운영 클러스터의 endpoint는 그 후 VIP `192.168.2.100`으로 컷오버됨. 본 변수는 부트스트랩 직후 상태의 흔적이며, 재실행은 절대 금지), `TALOS_VERSION=v1.13.0`
-- `02-create-talos-vm.sh`: `SCHEMATIC_ID=ce4c980550dd2ab1b17bbf2b08801c7eb59418eafe8f279833297925d67c7515` (Image Factory, `siderolabs/qemu-guest-agent` 포함), `NODE_CIDR=16`, `GATEWAY=192.168.1.1`
+- `01-gen-talos-config.sh`: `CLUSTER_NAME=talos-homelab`, `CLUSTER_VIP=192.168.2.100` (cluster endpoint, cp의 `vip.ip`와 동일), `TALOS_VERSION=v1.13.0`. **재실행은 절대 금지** — 인증서/시크릿이 통째로 새로 발급됨.
+- `02-place-base-snippets.sh`: `STORAGE=local`, `SNIPPETS_DIR=/var/lib/vz/snippets`. 멱등 — `_out/`이 갱신되면 재호출 안전.
+- `03-create-talos-vm.sh`: `SCHEMATIC_ID=ce4c980550dd2ab1b17bbf2b08801c7eb59418eafe8f279833297925d67c7515` (Image Factory, `siderolabs/qemu-guest-agent` 포함), `NODE_CIDR=16`, `GATEWAY=192.168.1.1`, `CP_VIP=192.168.2.100` (cp 역할 노드의 user.yaml에 자동 삽입할 VIP — 01의 `CLUSTER_VIP`와 동일하게 유지).
 
 ### 사본 위치 / 동기화
 
@@ -49,6 +50,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   ```bash
   scp node-management/*.sh node-management/*.md pve:k8s-ops/node-management/
   ```
+  스크립트가 rename된 직후에는 옛 파일이 PVE에 남아 있으므로 `ssh pve "rm -f k8s-ops/node-management/<old>.sh"`로 먼저 정리하세요.
 
 > 부트스트랩에 사용했던 별도 저장소(`nineking424/talos-dist`)는 본 프로젝트로 흡수 후 GitHub 측 archive 처리 + 로컬/PVE 사본 모두 삭제 완료. 이제 노드 관련 권위 있는 코드는 위 두 사본뿐입니다.
 
@@ -116,7 +118,7 @@ ssh pve "talosctl --talosconfig ~/talos-cluster/_out/talosconfig --nodes <IP> re
 
 # 새 노드 추가 (예: worker 추가)
 # 스크립트를 본 프로젝트에서 수정했다면 먼저 PVE로 동기화: scp node-management/*.sh pve:k8s-ops/node-management/
-ssh pve "cd ~/k8s-ops/node-management && bash 02-create-talos-vm.sh <VMID> <VM_NAME> <NODE_IP> worker"
+ssh pve "cd ~/k8s-ops/node-management && bash 03-create-talos-vm.sh <VMID> <VM_NAME> <NODE_IP> worker"
 # 그 후 노드 ready 확인: kubectl get nodes -w
 
 # Talos OS 업그레이드 (CP는 한 번에 한 대씩, etcd 쿼럼 유지)
@@ -142,7 +144,7 @@ ssh pve "talosctl --talosconfig ~/talos-cluster/_out/talosconfig --nodes 192.168
 - **`talosconfig`는 클러스터 전체 권한**을 가진 인증 파일입니다. Git에 커밋 금지, 1Password / Vault / 백업 디스크 등에 별도 보관.
 - **머신 컨피그 변경**: cloud-init은 최초 부팅 때만 동작합니다. 운영 중 노드의 컨피그를 바꾸려면 snippets의 `<VM_NAME>-user.yaml`을 수정한 뒤 `talosctl apply-config --nodes <IP> --file <path>`로 직접 반영. 자세한 절차는 `node-management/node-management-guide.md` 참고.
 - **`01-gen-talos-config.sh`를 다시 돌리지 말 것**: 인증서/시크릿이 통째로 새로 발급되어 운영 중인 클러스터를 망가뜨립니다. endpoint 변경 등은 `talosctl get/apply-config`로 처리.
-- **`02-create-talos-vm.sh`는 동일 VMID가 있으면 자동 destroy**합니다. 인자를 잘못 주면 운영 중 VM이 삭제됩니다.
+- **`03-create-talos-vm.sh`는 동일 VMID가 있으면 자동 destroy**합니다. 인자를 잘못 주면 운영 중 VM이 삭제됩니다.
 - **Control plane 업그레이드**는 한 번에 한 대씩, etcd 쿼럼을 유지하면서 순차 진행.
 
 ## 권장 도입 순서
