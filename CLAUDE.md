@@ -21,6 +21,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   - `pve-mini` (192.168.1.5), `pve-main` (192.168.1.6)도 ssh config에 있으나 현재 클러스터와 무관
 - **Talos 클러스터**: `talos-homelab` (Talos v1.13.0 / Kubernetes v1.36.0 / containerd 2.2.3 / Flannel CNI)
   - Control plane: `talos-cp-01` (192.168.2.106, VMID 106), `talos-cp-02` (192.168.2.107, VMID 107), `talos-cp-03` (192.168.2.108, VMID 108)
+  - **Cluster endpoint (VIP): `192.168.2.100`** — Talos native VIP (`machine.network.interfaces[].vip`), cp 한 대가 etcd leader election으로 보유, 장애 시 자동 fail-over. kubectl/talosctl 모두 이 IP로 접근.
   - Worker: `talos-wk-01` (192.168.2.111, VMID 111), `talos-wk-02` (192.168.2.112, VMID 112)
   - 네트워크: `192.168.0.0/16` 단일 서브넷, GW `192.168.1.1`, 노드는 `/16` 마스크 (`/24` 아님 — 라우터 DHCP 풀과 일치)
 - **kubectl context**: `admin@talos-homelab` (현재 활성)
@@ -38,7 +39,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 부트스트랩 시점에 박힌 핵심 변수(현재 클러스터를 그대로 다루는 한 변경 금지):
 
-- `01-gen-talos-config.sh`: `CLUSTER_NAME=talos-homelab`, `CONTROL_PLANE_IP=192.168.2.106` (cluster endpoint), `TALOS_VERSION=v1.13.0`
+- `01-gen-talos-config.sh`: `CLUSTER_NAME=talos-homelab`, `CONTROL_PLANE_IP=192.168.2.106` (`01`이 처음 만들 때 박았던 cluster endpoint — 운영 클러스터의 endpoint는 그 후 VIP `192.168.2.100`으로 컷오버됨. 본 변수는 부트스트랩 직후 상태의 흔적이며, 재실행은 절대 금지), `TALOS_VERSION=v1.13.0`
 - `02-create-talos-vm.sh`: `SCHEMATIC_ID=ce4c980550dd2ab1b17bbf2b08801c7eb59418eafe8f279833297925d67c7515` (Image Factory, `siderolabs/qemu-guest-agent` 포함), `NODE_CIDR=16`, `GATEWAY=192.168.1.1`
 
 ### 사본 위치 / 동기화
@@ -125,7 +126,7 @@ ssh pve "talosctl --talosconfig ~/talos-cluster/_out/talosconfig upgrade --nodes
 ssh pve "talosctl --talosconfig ~/talos-cluster/_out/talosconfig upgrade-k8s --nodes <CP_IP> --to <k8s-version>"
 
 # etcd 백업 (정기적으로)
-ssh pve "talosctl --talosconfig ~/talos-cluster/_out/talosconfig --nodes 192.168.2.106 etcd snapshot ~/talos-backups/etcd-\$(date +%Y%m%d-%H%M%S).db"
+ssh pve "talosctl --talosconfig ~/talos-cluster/_out/talosconfig --nodes 192.168.2.100 etcd snapshot ~/talos-backups/etcd-\$(date +%Y%m%d-%H%M%S).db"
 ```
 
 스크립트 실행이나 snippets 검증이 필요할 때는 `ssh pve "<command>"` 형태로 원격 호출. 파일 전송은 `scp` 또는 `rsync`. 로컬에서 `talosctl`을 직접 쓰려면 `scp pve:~/talos-cluster/_out/talosconfig ~/.talos/config` 후 `--talosconfig` 생략 가능.
@@ -151,7 +152,7 @@ ssh pve "talosctl --talosconfig ~/talos-cluster/_out/talosconfig --nodes 192.168
 | 순서 | 컴포넌트 | 구현 / 핵심 설정 | 의존 / 근거 |
 |---|---|---|---|
 | 1 ✓ | **metrics-server** | `metrics-server` chart. Talos는 kubelet serving cert를 자체 발급하므로 `--kubelet-insecure-tls` 또는 kubelet 인증서 신뢰 설정 필요 — 도입 시 확인. | 가장 가벼운 시작점(PV / LB / Ingress 의존 없음). `kubectl top`, HPA의 전제. **(✓ 도입 완료 — `metrics-server/`)** |
-| 2 | **Control Plane HA (VIP)** | `kube-vip` (ARP/L2 모드, **VIP `192.168.2.100`**). 도입 방식은 **Talos machine config에 static pod로 박아 넣기** 권장 — `talosctl apply-config`로 CP 노드에 패치. 적용 후 cluster endpoint를 `192.168.2.106` → `192.168.2.100`로 컷오버. | 첫 CP(106)가 죽으면 kubectl/talosctl 모두 끊기는 SPOF 해소. **운영 중 머신 컨피그 패치 + endpoint 컷오버** 절차라 신중히 — `node-management/node-management-guide.md`의 컨피그 변경 절차 따름. |
+| 2 ✓ | **Control Plane HA (VIP)** | **Talos native VIP** (`machine.network.interfaces[].vip`, **VIP `192.168.2.100`**). 추가 컴포넌트 없이 etcd 기반 leader election 내장 — cp 한 대가 VIP를 보유, 장애 시 자동 fail-over. cp 3대의 머신 컨피그에 patch 적용 + 모든 노드의 cluster endpoint를 `192.168.2.106` → `192.168.2.100`로 컷오버 완료. | 첫 CP(106)가 죽으면 kubectl/talosctl 모두 끊기는 SPOF 해소. **(✓ 도입 완료 — VIP 운영 메모는 `node-management/node-management-guide.md`)** |
 | 3 | **StorageClass / NFS** | `nfs-subdir-external-provisioner` chart. 백엔드는 NAS `nknas` (192.168.1.4). NFS export 경로는 NAS에서 미리 생성/허용 IP 설정. | 이후 단계(특히 관측성)와 stateful 워크로드의 전제. |
 | 4 | **LoadBalancer** | `MetalLB` (L2 모드). IP 풀: **`192.168.3.0/24` 전체**. 노드 대역 `192.168.2.x` 및 VIP `192.168.2.100`과 분리됨. 라우터 DHCP 풀이 `192.168.3.x`를 분배하지 않는지 사전 확인. | 홈랩이라 클라우드 LB 없음. Ingress controller가 `Service type=LoadBalancer`를 받으려면 필요. |
 | 5 | **Ingress** | `ingress-nginx`. Service type=LoadBalancer로 MetalLB가 IP 할당. | 외부 진입점. HTTP만 우선 운영하다가 필요 시 cert-manager를 추가해 HTTPS로. |

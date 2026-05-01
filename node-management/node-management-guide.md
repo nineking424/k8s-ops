@@ -340,6 +340,31 @@ talosctl apply-config \
 
 > **hostname:** snippet의 `HostnameConfig` 문서에서 `auto: stable`(random 생성) 대신 `hostname: <노드명>`을 박아야 의도한 이름(예: `talos-cp-01`)으로 부팅됩니다. 02 스크립트는 새 snippet을 만들 때 자동으로 `hostname: <VM_NAME>`을 박지만, 기존 snippet을 재사용하는 노드는 거기에 박힌 hostname이 그대로 적용됩니다(수동 패치 보존).
 
+### Control Plane VIP 운영
+
+cp 3대는 `machine.network.interfaces[].vip.ip = 192.168.2.100`을 머신 컨피그에 박아두었고, Talos가 etcd 기반 leader election으로 한 cp에만 VIP를 attach합니다. 다른 cp는 대기 상태이고, VIP 보유자가 죽으면 즉시 자동 fail-over됩니다 — 별도 컴포넌트(kube-vip 등) 없이 Talos 내장 기능만으로 처리.
+
+VIP 보유 cp 식별:
+
+```bash
+for ip in 192.168.2.106 192.168.2.107 192.168.2.108; do
+  echo "-- $ip --"
+  talosctl --endpoints $ip --nodes $ip get addresses 2>/dev/null \
+    | grep '192.168.2.100/' || echo '(not holder)'
+done
+```
+
+fail-over 검증 (VIP 보유자 reboot → 다른 cp로 즉시 이전, kubectl 무단절):
+
+```bash
+talosctl --nodes <VIP_HOLDER_IP> reboot
+# 몇 초 안에 다른 cp가 VIP를 보유. kubectl get nodes는 끊기지 않아야 함.
+```
+
+새 cp 추가 시 주의: snippet에도 동일한 `machine.network.interfaces` 블록(자기 IP `/16` + `vip.ip: 192.168.2.100`)을 박은 뒤 02 스크립트로 생성해야 합니다. base 템플릿에는 노드별 IP 자리 때문에 박지 않고, 노드별 user.yaml에만 둡니다. cluster endpoint(`cluster.controlPlane.endpoint`)는 base/user 모두 `https://192.168.2.100:6443`로 통일.
+
+addresses와 cloud-init이 박는 IP가 어긋나면 인터페이스가 잠시 down될 수 있으니, patch yaml의 `addresses` 항목은 반드시 해당 노드의 정적 IP와 일치시킵니다.
+
 ### Talos 업그레이드
 
 ```bash
