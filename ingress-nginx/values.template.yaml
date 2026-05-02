@@ -1,0 +1,67 @@
+# ingress-nginx values
+# Chart: ingress-nginx/ingress-nginx (4.15.1, app v1.15.1)
+#
+# 모드: LoadBalancer Service (MetalLB가 IP 할당). controller Service에
+# metallb.universe.tf/loadBalancerIPs 어노테이션으로 192.168.3.10에 핀.
+#
+# IngressClass `nginx`를 클러스터 default로 설정 — 단일 컨트롤러 환경이라
+# ingressClassName 미지정 Ingress도 자동으로 nginx가 처리.
+#
+# AdmissionWebhook은 차트 기본 그대로 enable (Ingress 생성/수정 시 validate).
+
+controller:
+  replicaCount: 2
+
+  ingressClassResource:
+    name: nginx
+    enabled: true
+    default: true
+    controllerValue: k8s.io/ingress-nginx
+
+  # 클라이언트 source IP 보존 — MetalLB L2 모드와 호환.
+  # Local로 두면 LB가 announce된 노드의 controller pod만 트래픽 받음.
+  service:
+    type: LoadBalancer
+    externalTrafficPolicy: Local
+    annotations:
+      # MetalLB 권장 핀 어노테이션. loadBalancerIP 필드(deprecated) 대신.
+      metallb.universe.tf/loadBalancerIPs: "192.168.3.10"
+
+  # replica 2가 같은 노드에 몰리지 않게 권고 anti-affinity.
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+                - key: app.kubernetes.io/name
+                  operator: In
+                  values: ["ingress-nginx"]
+                - key: app.kubernetes.io/instance
+                  operator: In
+                  values: ["ingress-nginx"]
+                - key: app.kubernetes.io/component
+                  operator: In
+                  values: ["controller"]
+            topologyKey: kubernetes.io/hostname
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      memory: 256Mi
+
+  # 메트릭은 Prometheus 도입(#6) 시 활성화.
+  metrics:
+    enabled: false
+
+  admissionWebhooks:
+    enabled: true
+    failurePolicy: Fail
+    patch:
+      enabled: true
+
+defaultBackend:
+  enabled: false
