@@ -30,6 +30,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   - `_talos-cp-base.yaml`, `_talos-wk-base.yaml` — 02가 배치한 역할별 base 템플릿
   - `talos-cp-0{1,2,3}-user.yaml`, `talos-wk-0{1,2}-user.yaml` — 03이 base에서 만든 노드별 cloud-init user-data (cp는 VIP 블록 포함)
   - cloud-init은 최초 부팅에만 동작하므로, 운영 중 노드의 컨피그를 바꾸려면 해당 user.yaml을 수정 → `talosctl apply-config`로 직접 반영
+- **외부 reverse proxy / 외부 노출 도메인**: 외부망의 **nginx proxy manager**(이하 NPM)가 `*.k8s.stjeong.com` 와일드카드 호스트를 클러스터 ingress(`192.168.3.10:80`, ingress-nginx LoadBalancer)로 HTTP forward. **TLS는 NPM에서 종단**(edge termination) — 클러스터 내부는 평문 HTTP만 흐름. 컴포넌트를 외부로 노출할 때는 `<service>.k8s.stjeong.com` 호스트의 `Ingress` 리소스만 만들면 NPM이 자동으로 받아 forward(추가 NPM 설정 불필요). 따라서 **클러스터 측에는 cert-manager / DNS / TLS 설정이 필요 없음**(NPM이 모두 담당). Grafana 등 reverse-proxy aware 앱은 `root_url`/`domain`에 `https://<host>`로 외부 URL을 알려야 redirect/링크가 깨지지 않음.
 
 ## 노드 관리 (`node-management/`)
 
@@ -158,7 +159,7 @@ ssh pve "talosctl --talosconfig ~/talos-cluster/_out/talosconfig --nodes 192.168
 | 3 ✓ | **StorageClass / NFS** | `nfs-subdir-external-provisioner` chart. 백엔드 NAS `nknas` (192.168.1.4), 단일 export `/volume1/nfsvolume`. SC `nfs-client`(default)로 동적 PV 제공. reclaimPolicy=Delete, archiveOnDelete=false. | 이후 단계(특히 관측성)와 stateful 워크로드의 전제. **(✓ 도입 완료 — `nfs-subdir-external-provisioner/`)** |
 | 4 ✓ | **LoadBalancer** | `MetalLB` (L2 모드, chart 0.15.3). IPAddressPool `home-pool` = `192.168.3.0/24`, L2Advertisement `home-l2`. 노드 대역 `192.168.2.x` / VIP `192.168.2.100`과 분리. speaker는 hostNetwork/NET_RAW 필요해 `metallb-system` ns에 PodSecurity `privileged` 라벨 적용(install.sh 자동). | 홈랩이라 클라우드 LB 없음. Ingress controller가 `Service type=LoadBalancer`를 받으려면 필요. **(✓ 도입 완료 — `metallb/`)** |
 | 5 ✓ | **Ingress** | `ingress-nginx` chart 4.15.1. `Service type=LoadBalancer`로 MetalLB가 핀(`metallb.universe.tf/loadBalancerIPs=192.168.3.10`) IP 할당. IngressClass `nginx`를 클러스터 default로. externalTrafficPolicy=Local로 source IP 보존. replica 2 + anti-affinity로 wk-01/wk-02 분산. | 외부 진입점. HTTP만 우선 운영하다가 필요 시 cert-manager를 추가해 HTTPS로. **(✓ 도입 완료 — `ingress-nginx/`)** |
-| 6 | **관측성 스택** | `kube-prometheus-stack` (Prometheus + Grafana + Alertmanager), Loki/Promtail | PV 필요(3번), 외부 노출 시 Ingress(5번). 가장 무거운 단계 — 리소스 여유 확보 후. |
+| 6 ✓ | **관측성 스택 (메트릭)** | `kube-prometheus-stack` chart 84.5.0. Prometheus(20Gi/7d) + Grafana + Alertmanager(2Gi) + node-exporter(DaemonSet) + kube-state-metrics. 모두 `nfs-client` PVC. Grafana는 Ingress(`grafana.k8s.stjeong.com`, HTTP) — 외부 NPM이 와일드카드 + TLS 종단. Prometheus/Alertmanager는 ClusterIP(port-forward). Talos 특수성으로 controller-manager/scheduler/proxy/etcd ServiceMonitor는 비활성. node-exporter용 PSA `privileged` 라벨은 install.sh 자동. **로깅(Loki/Promtail)은 별도 컴포넌트로 분리 도입 예정.** | PV(3번), Ingress(5번), 외부 NPM 와일드카드 의존. **(✓ 도입 완료 — `kube-prometheus-stack/`)** |
 
 각 컴포넌트는 본 프로젝트에 `<component>/` 폴더로 추가 — [클러스터 컴포넌트 추가](#클러스터-컴포넌트-추가) 컨벤션을 따릅니다. 도입할 때 이 표의 해당 행을 그 폴더의 `README.md`에 옮기고 본 표는 "✓ 도입 완료" 표시로 갱신.
 
