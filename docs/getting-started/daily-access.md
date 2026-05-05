@@ -53,7 +53,7 @@ ssh pve "talosctl --talosconfig ~/talos-cluster/_out/talosconfig --nodes 192.168
   etcd snapshot ~/talos-backups/etcd-\$(date +%Y%m%d-%H%M%S).db"
 ```
 
-자주 쓰는 절차의 권위 있는 사본은 [노드 관리 가이드](../../node-management/node-management-guide.md). cluster endpoint(`192.168.2.100`)로 명령을 보내면 VIP 보유 cp가 받는다 — 보유자가 바뀌어도 명령이 유지됨.
+자주 쓰는 절차의 권위 있는 사본은 [노드 관리 가이드](https://github.com/nineking424/k8s-ops/blob/main/node-management/node-management-guide.md). cluster endpoint(`192.168.2.100`)로 명령을 보내면 VIP 보유 cp가 받는다 — 보유자가 바뀌어도 명령이 유지됨.
 
 ## 외부 노출 호스트 매핑
 
@@ -84,7 +84,7 @@ ssh pve "cd ~/k8s-ops/node-management && bash 03-create-talos-vm.sh <VMID> <VM_N
 kubectl get nodes -w
 ```
 
-cp 추가 시는 03이 머신 컨피그에 VIP 블록(`vip.ip: 192.168.2.100`)을 자동 삽입한다 — 별도 수작업 불필요. 자세한 절차는 [노드 관리 가이드 § 배포 워크플로우](../../node-management/node-management-guide.md#배포-워크플로우).
+cp 추가 시는 03이 머신 컨피그에 VIP 블록(`vip.ip: 192.168.2.100`)을 자동 삽입한다 — 별도 수작업 불필요. 자세한 절차는 [노드 관리 가이드 § 배포 워크플로우](https://github.com/nineking424/k8s-ops/blob/main/node-management/node-management-guide.md#배포-워크플로우).
 
 ## 가드레일 (반복하지만 한 번 더)
 

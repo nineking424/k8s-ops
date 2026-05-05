@@ -9,7 +9,7 @@ NAS의 단일 NFS export를 백엔드로 동적 PV(`StorageClass nfs-client`)를
 
 ## 위치 / 차트
 
-- 폴더: [`nfs-subdir-external-provisioner/`](../../nfs-subdir-external-provisioner/) — 권위 있는 install/검증 사본은 그 폴더의 `README.md`.
+- 폴더: [`nfs-subdir-external-provisioner/`](https://github.com/nineking424/k8s-ops/tree/main/nfs-subdir-external-provisioner/) — 권위 있는 install/검증 사본은 그 폴더의 `README.md`.
 - 차트: `nfs-subdir-external-provisioner/nfs-subdir-external-provisioner` v4.0.18 (app v4.0.2)
 - Namespace: `nfs-subdir-external-provisioner` (자체)
 
@@ -44,4 +44,4 @@ NAS의 단일 NFS export를 백엔드로 동적 PV(`StorageClass nfs-client`)를
 - [§7 NFS 마운트 장애](../operating/runbook.md#7-nfs-마운트-장애)
 - [트러블슈팅 — PVC가 Pending에서 안 넘어감](../operating/troubleshooting.md#pvc가-pending에서-안-넘어감)
 - [트러블슈팅 — NFS PVC가 mount 실패](../operating/troubleshooting.md#nfs-pvc가-mount-실패--읽기쓰기-iohang)
-- 검증 절차는 [`nfs-subdir-external-provisioner/README.md` § 검증 체크리스트](../../nfs-subdir-external-provisioner/README.md).
+- 검증 절차는 [`nfs-subdir-external-provisioner/README.md` § 검증 체크리스트](https://github.com/nineking424/k8s-ops/blob/main/nfs-subdir-external-provisioner/README.md).

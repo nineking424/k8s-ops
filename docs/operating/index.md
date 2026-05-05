@@ -8,4 +8,4 @@
 - [스케일링](scaling.md) — 노드 추가 vs replicaCount, 컴포넌트별 한계.
 - [업그레이드와 롤백](upgrades-and-rollback.md) — Talos OS / Kubernetes / helm 차트 업그레이드 흐름과 롤백 가능성.
 
-깊은 부트스트랩 절차는 [`node-management/node-management-guide.md`](../../node-management/node-management-guide.md)에 그대로 둔다 — 본 섹션은 부트스트랩 이후 운영을 다룬다.
+깊은 부트스트랩 절차는 [`node-management/node-management-guide.md`](https://github.com/nineking424/k8s-ops/blob/main/node-management/node-management-guide.md)에 그대로 둔다 — 본 섹션은 부트스트랩 이후 운영을 다룬다.

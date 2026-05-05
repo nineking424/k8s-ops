@@ -9,7 +9,7 @@
 
 ## 위치 / 차트
 
-- 폴더: [`metrics-server/`](../../metrics-server/) — 권위 있는 install/검증 사본은 그 폴더의 `README.md`.
+- 폴더: [`metrics-server/`](https://github.com/nineking424/k8s-ops/tree/main/metrics-server/) — 권위 있는 install/검증 사본은 그 폴더의 `README.md`.
 - 차트: `metrics-server/metrics-server` v3.13.0 (app v0.8.0)
 - Namespace: `kube-system`
 
@@ -34,4 +34,4 @@ Talos kubelet은 self-signed serving 인증서를 사용해 metrics-server가 �
 ## 연결된 런북 / 트러블슈팅
 
 - [모니터링 — Prometheus targets 검증](../operating/monitoring.md#prometheus-targets-검증) — metrics-server 자체 알람보다 Prometheus를 통한 추적이 일반적.
-- 검증 절차는 [`metrics-server/README.md` § 검증 체크리스트](../../metrics-server/README.md).
+- 검증 절차는 [`metrics-server/README.md` § 검증 체크리스트](https://github.com/nineking424/k8s-ops/blob/main/metrics-server/README.md).

@@ -15,7 +15,7 @@
 
 ## 위치 / 차트
 
-- 폴더: [`kube-prometheus-stack/`](../../kube-prometheus-stack/) — 권위 있는 install/검증 사본은 그 폴더의 `README.md`.
+- 폴더: [`kube-prometheus-stack/`](https://github.com/nineking424/k8s-ops/tree/main/kube-prometheus-stack/) — 권위 있는 install/검증 사본은 그 폴더의 `README.md`.
 - 차트: `prometheus-community/kube-prometheus-stack` v84.5.0 (prometheus-operator app v0.90.1)
 - Namespace: `monitoring` (자체, **PSA `privileged`** 필수 — node-exporter용)
 
@@ -51,4 +51,4 @@ Grafana `root_url`은 `https://grafana.k8s.stjeong.com`로 박혀 있어 NPM 뒤
 - [트러블슈팅 — Grafana 외부 접속이 안 되거나 redirect가 깨짐](../operating/troubleshooting.md#grafana-외부-접속이-안-되거나-redirect가-깨짐)
 - [트러블슈팅 — node-exporter pod이 일부 노드에서 안 뜸](../operating/troubleshooting.md#node-exporter-pod이-일부-노드에서-안-뜸)
 - [업그레이드와 롤백 — Helm 차트 업그레이드](../operating/upgrades-and-rollback.md#helm-차트-업그레이드) (CRD 갱신 절차 포함)
-- 검증 절차는 [`kube-prometheus-stack/README.md` § 검증 체크리스트](../../kube-prometheus-stack/README.md).
+- 검증 절차는 [`kube-prometheus-stack/README.md` § 검증 체크리스트](https://github.com/nineking424/k8s-ops/blob/main/kube-prometheus-stack/README.md).

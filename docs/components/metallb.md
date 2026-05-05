@@ -10,7 +10,7 @@
 
 ## 위치 / 차트
 
-- 폴더: [`metallb/`](../../metallb/) — 권위 있는 install/검증 사본은 그 폴더의 `README.md`.
+- 폴더: [`metallb/`](https://github.com/nineking424/k8s-ops/tree/main/metallb/) — 권위 있는 install/검증 사본은 그 폴더의 `README.md`.
 - 차트: `metallb/metallb` v0.15.3 (app v0.15.3)
 - Namespace: `metallb-system` (자체, **PSA `privileged`** 필수)
 
@@ -39,7 +39,7 @@
 
 ## 연결된 런북 / 트러블슈팅
 
-- [트러블슈팅 — LoadBalancer Service의 EXTERNAL-IP가 `<pending>`](../operating/troubleshooting.md#loadbalancer-service의-external-ip가-pending)
+- [트러블슈팅 — LoadBalancer Service의 EXTERNAL-IP가 `<pending>`](../operating/troubleshooting.md#loadbalancer-service의-external-ip가)
 - [트러블슈팅 — EXTERNAL-IP는 할당됐는데 외부에서 접속 안 됨](../operating/troubleshooting.md#external-ip는-할당됐는데-외부에서-접속-안-됨)
 - [네트워크 토폴로지 — MetalLB L2 announce](../concepts/network-topology.md#metallb-l2-announce)
-- 검증 절차는 [`metallb/README.md` § 검증 체크리스트](../../metallb/README.md).
+- 검증 절차는 [`metallb/README.md` § 검증 체크리스트](https://github.com/nineking424/k8s-ops/blob/main/metallb/README.md).

@@ -62,7 +62,7 @@ mkdocs build --strict
 
 ## 도입 순서 표 갱신
 
-[루트 `CLAUDE.md`의 권장 도입 순서 표](../../CLAUDE.md)에서 해당 컴포넌트를 "✓ 도입 완료"로 마크. CLAUDE.md는 LLM/사람 모두의 공통 컨텍스트라 누락되면 "현재 무엇이 도입돼 있는지"가 흐려진다.
+[루트 `CLAUDE.md`의 권장 도입 순서 표](https://github.com/nineking424/k8s-ops/blob/main/CLAUDE.md)에서 해당 컴포넌트를 "✓ 도입 완료"로 마크. CLAUDE.md는 LLM/사람 모두의 공통 컨텍스트라 누락되면 "현재 무엇이 도입돼 있는지"가 흐려진다.
 
 ## 상위 워크스페이스 사본 처리
 

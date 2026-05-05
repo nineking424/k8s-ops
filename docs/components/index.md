@@ -6,7 +6,7 @@
 |---|---|---|---|
 | 0 | [node-management](node-management.md) | Talos 머신 컨피그 발급 + Proxmox에 VM 생성. 클러스터의 토대. | 없음 |
 | 1 | [metrics-server](metrics-server.md) | `kubectl top`, HPA가 쓰는 리소스 메트릭 API. | 없음 |
-| 2 | (CP HA / VIP) | Talos native VIP `192.168.2.100`. 별도 컴포넌트 없이 머신 컨피그로 처리 — [노드 관리 가이드 §VIP 운영](../../node-management/node-management-guide.md#control-plane-vip-운영). | 없음 |
+| 2 | (CP HA / VIP) | Talos native VIP `192.168.2.100`. 별도 컴포넌트 없이 머신 컨피그로 처리 — [노드 관리 가이드 §VIP 운영](https://github.com/nineking424/k8s-ops/blob/main/node-management/node-management-guide.md#control-plane-vip-운영). | 없음 |
 | 3 | [nfs-subdir-external-provisioner](nfs-subdir-external-provisioner.md) | StorageClass `nfs-client` (default). NAS `nknas`(192.168.1.4) 백엔드. | 없음 |
 | 4 | [MetalLB](metallb.md) | L2 모드 LoadBalancer. IP 풀 `192.168.3.0/24`. | 없음 |
 | 5 | [ingress-nginx](ingress-nginx.md) | HTTP 외부 진입점. LB IP `192.168.3.10` pin. | MetalLB |

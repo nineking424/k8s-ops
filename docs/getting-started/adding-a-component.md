@@ -63,7 +63,7 @@ README 절 순서: **무엇 / 왜** → **설치** → **핵심 설정** → **�
 
 ### 7. 도입 순서 표 갱신
 
-[루트 `CLAUDE.md`의 권장 도입 순서 표](../../CLAUDE.md)에서 해당 컴포넌트를 "✓ 도입 완료"로 마크.
+[루트 `CLAUDE.md`의 권장 도입 순서 표](https://github.com/nineking424/k8s-ops/blob/main/CLAUDE.md)에서 해당 컴포넌트를 "✓ 도입 완료"로 마크.
 
 ## 충돌 회피
 

@@ -57,7 +57,7 @@ ssh pve "for ip in 192.168.2.106 192.168.2.107 192.168.2.108; do
 done"
 ```
 
-VIP 보유자가 죽으면 다른 cp가 즉시 보유 — `kubectl get nodes`는 보통 끊기지 않거나 수 초 안에 복구. 자세한 운영 메모는 [노드 관리 가이드 § Control Plane VIP 운영](../../node-management/node-management-guide.md#control-plane-vip-운영).
+VIP 보유자가 죽으면 다른 cp가 즉시 보유 — `kubectl get nodes`는 보통 끊기지 않거나 수 초 안에 복구. 자세한 운영 메모는 [노드 관리 가이드 § Control Plane VIP 운영](https://github.com/nineking424/k8s-ops/blob/main/node-management/node-management-guide.md#control-plane-vip-운영).
 
 ## MetalLB L2 announce
 
@@ -79,5 +79,5 @@ LB IP 핀:
 ## 알려진 한계
 
 - **단일 L2 도메인 가정** — 노드가 다른 L2 세그먼트로 분산되면 MetalLB L2 모드는 동작하지 않는다. 그 시점에 BGP 모드로 전환하거나 토폴로지를 단일 L2로 유지한다.
-- **/16 마스크 강제** — 라우터의 LAN 인터페이스가 `/16`인 한 모든 노드도 `/16`이어야 한다. `/24`로 박으면 다른 `/24` 대역(LB 풀, VIP)으로 가는 패킷이 게이트웨이를 거쳐 라우팅되려고 시도하면서 외부 통신이 깨진다 — 자세한 진단은 [노드 관리 가이드 § 외부 통신 안 됨](../../node-management/node-management-guide.md#외부-통신-안-됨-이미지-pull-실패-등).
+- **/16 마스크 강제** — 라우터의 LAN 인터페이스가 `/16`인 한 모든 노드도 `/16`이어야 한다. `/24`로 박으면 다른 `/24` 대역(LB 풀, VIP)으로 가는 패킷이 게이트웨이를 거쳐 라우팅되려고 시도하면서 외부 통신이 깨진다 — 자세한 진단은 [노드 관리 가이드 § 외부 통신 안 됨](https://github.com/nineking424/k8s-ops/blob/main/node-management/node-management-guide.md#외부-통신-안-됨-이미지-pull-실패-등).
 - **Pod 네트워크는 별도** — Flannel CNI가 pod 간 통신용 overlay를 별도 대역에서 운영한다. 본 페이지는 노드/외부 노출 대역만 다룬다.

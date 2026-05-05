@@ -10,7 +10,7 @@
 
 ### 왜 kube-vip가 아니라 Talos native VIP인가
 
-Talos가 `machine.network.interfaces[].vip`로 etcd 기반 leader election을 내장 — 추가 컴포넌트 없이 cp 한 대가 VIP를 보유하고, 죽으면 즉시 fail-over. kube-vip를 띄우는 것보다 단순하고, 머신 컨피그에 박혀 있어 노드 추가 시 자동 적용된다. 자세한 동작은 [`node-management/node-management-guide.md` § Control Plane VIP 운영](../node-management/node-management-guide.md#control-plane-vip-운영).
+Talos가 `machine.network.interfaces[].vip`로 etcd 기반 leader election을 내장 — 추가 컴포넌트 없이 cp 한 대가 VIP를 보유하고, 죽으면 즉시 fail-over. kube-vip를 띄우는 것보다 단순하고, 머신 컨피그에 박혀 있어 노드 추가 시 자동 적용된다. 자세한 동작은 [`node-management/node-management-guide.md` § Control Plane VIP 운영](https://github.com/nineking424/k8s-ops/blob/main/node-management/node-management-guide.md#control-plane-vip-운영).
 
 ### 왜 GitOps(ArgoCD/Flux)를 안 쓰나
 
@@ -24,7 +24,7 @@ Talos가 `machine.network.interfaces[].vip`로 etcd 기반 leader election을 �
 
 ### kubectl이 갑자기 끊겼다
 
-[트러블슈팅 — kubectl이 먹통](operating/troubleshooting.md#kubectl이-먹통-—-vip-fail-over-중) 참고. cp VIP fail-over는 보통 수 초 안에 끝나므로 즉시 재시도해본다. 30초 이상 끊기면 [런북 §1](operating/runbook.md#1-etcd-쿼럼-손실-진단)으로.
+[트러블슈팅 — kubectl이 먹통](operating/troubleshooting.md#kubectl이-먹통--vip-fail-over-중) 참고. cp VIP fail-over는 보통 수 초 안에 끝나므로 즉시 재시도해본다. 30초 이상 끊기면 [런북 §1](operating/runbook.md#1-etcd-쿼럼-손실-진단)으로.
 
 ### NFS 디렉토리에 직접 접근하고 싶다
 

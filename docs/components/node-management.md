@@ -42,4 +42,4 @@ Talos 머신 컨피그 발급 + Proxmox VM 생성 스크립트. 클러스터의 
 
 ## 권위 있는 사본
 
-세부 절차의 단일 진실은 [`node-management/node-management-guide.md`](../../node-management/node-management-guide.md). 본 페이지는 그 가이드의 진입점이다.
+세부 절차의 단일 진실은 [`node-management/node-management-guide.md`](https://github.com/nineking424/k8s-ops/blob/main/node-management/node-management-guide.md). 본 페이지는 그 가이드의 진입점이다.

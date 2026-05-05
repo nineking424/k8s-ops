@@ -68,7 +68,7 @@ flowchart TD
 - **cp 1대 손실**: VIP가 다른 cp로 즉시 fail-over. etcd 쿼럼은 2/3로 유지. kubectl/talosctl은 끊기지 않거나 수 초 안에 복구.
 - **cp 2대 손실**: etcd 쿼럼 깨짐. 클러스터가 read-only로 떨어지고 새 워크로드 배포 불가. 복구 절차는 [런북 §1](../operating/runbook.md#1-etcd-쿼럼-손실-진단).
 - **worker 1대 손실**: ingress-nginx replicaCount=2 + anti-affinity로 wk-01/wk-02에 분산되어 있어 한 대 죽어도 LB 트래픽이 다른 worker로 흐른다. 단, `externalTrafficPolicy=Local`이라 announce된 노드에 controller pod이 없으면 트래픽이 끊기므로 두 대 모두 죽으면 외부 진입이 끊김.
-- **NFS NAS 장애**: 모든 PVC 워크로드가 IO 블록. metrics-server / MetalLB / ingress-nginx는 PV를 안 쓰므로 영향 없음. 복구는 NAS 측 — 클러스터 측 대응은 [트러블슈팅 — NFS 마운트 장애](../operating/troubleshooting.md#nfs-pvc가-mount-실패-읽기-쓰기-iohang).
+- **NFS NAS 장애**: 모든 PVC 워크로드가 IO 블록. metrics-server / MetalLB / ingress-nginx는 PV를 안 쓰므로 영향 없음. 복구는 NAS 측 — 클러스터 측 대응은 [트러블슈팅 — NFS 마운트 장애](../operating/troubleshooting.md#nfs-pvc가-mount-실패--읽기쓰기-iohang).
 
 ## 의도적으로 하지 않은 것
 

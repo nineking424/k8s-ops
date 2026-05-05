@@ -34,7 +34,7 @@ cp 2대 이상이 죽거나 unreachable 상태이거나, kubectl이 30초 넘게
 - `talosctl --nodes <CP_IP> etcd members`가 cp 3대를 모두 보여줌(`STATE: STARTED`).
 - `talosctl health`가 `etcd: HEALTHY`.
 
-> **etcd recover는 마지막 수단** — 백업 시점 이후의 클러스터 변경은 모두 잃는다. 정기 백업이 없다면 recover 실행 전에 [§6 etcd 백업/복구](#6-etcd-백업복구)부터.
+> **etcd recover는 마지막 수단** — 백업 시점 이후의 클러스터 변경은 모두 잃는다. 정기 백업이 없다면 recover 실행 전에 [§6 etcd 백업/복구](#6-etcd-백업--복구)부터.
 
 ## 2. cp VIP fail-over 검증
 
@@ -123,7 +123,7 @@ cp는 한 번에 한 대씩, etcd 쿼럼을 유지하며 순차 진행.
 
 ### Steps
 
-1. 백업 먼저 — [§6 etcd 백업/복구](#6-etcd-백업복구).
+1. 백업 먼저 — [§6 etcd 백업/복구](#6-etcd-백업--복구).
 2. worker부터 업그레이드:
    ```bash
    ssh pve "talosctl --talosconfig ~/talos-cluster/_out/talosconfig \
@@ -262,7 +262,7 @@ cp VIP를 다른 IP로 옮기거나 외부 LB로 바꾸고 싶을 때. **부트�
 
 ### Steps
 
-1. **부트스트랩 전이라면**: `01-gen-talos-config.sh`의 `CLUSTER_VIP`를 새 값으로 바꾸고 01 → 02를 다시 돌리고, 기존 노드별 user.yaml 삭제 후 03 재호출. 자세한 흐름은 [노드 관리 가이드 § 머신 컨피그 endpoint와 노드 IP 불일치](../../node-management/node-management-guide.md#머신-컨피그-endpoint와-노드-ip-불일치).
+1. **부트스트랩 전이라면**: `01-gen-talos-config.sh`의 `CLUSTER_VIP`를 새 값으로 바꾸고 01 → 02를 다시 돌리고, 기존 노드별 user.yaml 삭제 후 03 재호출. 자세한 흐름은 [노드 관리 가이드 § 머신 컨피그 endpoint와 노드 IP 불일치](https://github.com/nineking424/k8s-ops/blob/main/node-management/node-management-guide.md#머신-컨피그-endpoint와-노드-ip-불일치).
 2. **부트스트랩 후라면**: `01-gen-talos-config.sh` 절대 다시 돌리지 말 것. talosctl로 직접 머신 컨피그를 수정.
    ```bash
    ssh pve "talosctl --talosconfig ~/talos-cluster/_out/talosconfig \

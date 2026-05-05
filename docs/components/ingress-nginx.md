@@ -10,7 +10,7 @@
 
 ## 위치 / 차트
 
-- 폴더: [`ingress-nginx/`](../../ingress-nginx/) — 권위 있는 install/검증 사본은 그 폴더의 `README.md`.
+- 폴더: [`ingress-nginx/`](https://github.com/nineking424/k8s-ops/tree/main/ingress-nginx/) — 권위 있는 install/검증 사본은 그 폴더의 `README.md`.
 - 차트: `ingress-nginx/ingress-nginx` v4.15.1 (app v1.15.1)
 - Namespace: `ingress-nginx` (자체)
 
@@ -44,4 +44,4 @@
 - [트러블슈팅 — Ingress가 503 혹은 default backend 404를 반환](../operating/troubleshooting.md#ingress가-503-혹은-default-backend-404를-반환)
 - [트러블슈팅 — Grafana 외부 접속이 안 되거나 redirect가 깨짐](../operating/troubleshooting.md#grafana-외부-접속이-안-되거나-redirect가-깨짐) (외부 NPM 쪽 진단 분기 포함)
 - [외부 노출 모델](../concepts/external-exposure.md)
-- 검증 절차는 [`ingress-nginx/README.md` § 검증 체크리스트](../../ingress-nginx/README.md).
+- 검증 절차는 [`ingress-nginx/README.md` § 검증 체크리스트](https://github.com/nineking424/k8s-ops/blob/main/ingress-nginx/README.md).
