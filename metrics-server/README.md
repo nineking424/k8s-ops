@@ -27,6 +27,18 @@ Talos kubelet은 self-signed serving 인증서를 사용하므로 metrics-server
 
 장기적으론 kubelet serving cert를 cluster CA로 서명하도록 Talos machine config를 패치하는 방법이 있으나(`--rotate-server-certificates`) 부트스트랩 클러스터에선 일단 insecure-tls가 표준.
 
+## 한계 / 의도적으로 하지 않은 것
+
+- **CPU/Memory만** — disk·network·custom 메트릭 없음. 정밀한 시계열은 `kube-prometheus-stack`이 담당.
+- **In-memory 보관** — 1~2분 히스토리만. 과거 추이는 Prometheus에서 본다.
+- **kubelet 인증서 검증 OFF** — `--kubelet-insecure-tls`. 동일 L2 클러스터라 위험은 낮지만, 외부 네트워크에 kubelet이 노출되면 재검토.
+- **HA replica 미설정** — 차트 기본값(replicas=1). 단일 인스턴스가 죽어도 HPA가 30초~1분 후 다음 메트릭으로 복구되므로 홈랩 단계에서는 충분.
+
+## 연결된 런북 / 트러블슈팅
+
+- [트러블슈팅 — node가 NotReady로 떨어짐](../docs/operating/troubleshooting.md#node가-notready로-떨어짐) — `kubectl top`이 비어 있거나 일부 노드만 안 보일 때 1차 확인.
+- [모니터링 — 활성 ServiceMonitor 카탈로그](../docs/operating/monitoring.md#활성--비활성-servicemonitor) — kubelet 메트릭은 Prometheus가 별도로 다시 받아간다.
+
 ## 검증 체크리스트
 
 - [ ] `kubectl get pods -n kube-system -l app.kubernetes.io/name=metrics-server` — Running, READY 1/1

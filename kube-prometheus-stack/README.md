@@ -45,6 +45,23 @@
 
 > **외부 노출 / TLS:** 외부 NPM이 `*.k8s.stjeong.com` 와일드카드를 받아 ingress-nginx LB(`192.168.3.10:80`)로 HTTP forward + edge TLS 종단. 클러스터 Ingress는 HTTP만 정의(`tls:` 섹션 없음). 새 호스트(`<svc>.k8s.stjeong.com`)는 NPM 추가 설정 없이 즉시 사용 가능. cert-manager는 본 컴포넌트에 불필요.
 
+## 한계 / 의도적으로 하지 않은 것
+
+- **Loki / Promtail 없음 — 메트릭 전용** — 로깅 스택은 별도 컴포넌트로 분리 도입 예정.
+- **cp 4개 ServiceMonitor 비활성** — controller-manager / scheduler / proxy / etcd. Talos 기본값에서 메트릭 미공개. 활성화하려면 머신 컨피그 패치 필요.
+- **Prometheus replicas=1** — HA Prometheus는 차트 + Thanos 도입이 별도 필요. 본 단계에서는 단일 인스턴스.
+- **Alertmanager → 외부 알림 미연결** — Slack/Discord/메일 receiver 미설정. 알람을 외부로 흘리려면 `values.yaml`의 `alertmanager.config.receivers`에 추가.
+- **Default rules / dashboards 그대로** — 차트 제공 알림 규칙과 대시보드를 그대로 사용. 클러스터 고유 알람은 별도 PrometheusRule로 추가.
+- **Grafana DB는 SQLite (PVC 5Gi)** — 외부 RDB(MySQL/Postgres) 연결 안 함. 단일 운영자 환경에서는 충분.
+
+## 연결된 런북 / 트러블슈팅
+
+- [모니터링](../docs/operating/monitoring.md) — 진입점/대시보드/알람 카탈로그.
+- [트러블슈팅 — Prometheus가 disk full](../docs/operating/troubleshooting.md#prometheus가-disk-full)
+- [트러블슈팅 — Grafana 외부 접속이 안 되거나 redirect가 깨짐](../docs/operating/troubleshooting.md#grafana-외부-접속이-안-되거나-redirect가-깨짐)
+- [트러블슈팅 — node-exporter pod이 일부 노드에서 안 뜸](../docs/operating/troubleshooting.md#node-exporter-pod이-일부-노드에서-안-뜸)
+- [업그레이드와 롤백 — Helm 차트 업그레이드](../docs/operating/upgrades-and-rollback.md#helm-차트-업그레이드) — CRD 갱신 절차 포함.
+
 ## Grafana 접속
 
 ```bash

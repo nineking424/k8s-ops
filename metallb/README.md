@@ -36,6 +36,19 @@
 
 > **PodSecurity:** speaker는 `hostNetwork=true`, `NET_RAW`, hostPort 7472/7946을 요구해 클러스터 기본값 `baseline:latest`에선 차단됨. `install.sh`가 `metallb-system` 네임스페이스에 `pod-security.kubernetes.io/{enforce,audit,warn}=privileged` 라벨을 자동으로 박는다. 차트가 만든 ns를 그대로 쓰면 차단되므로 install.sh 흐름을 우회하지 말 것.
 
+## 한계 / 의도적으로 하지 않은 것
+
+- **L2 only** — BGP 모드 미사용. 라우터/스위치와 BGP peering이 가능해지면 풀 IP 전체 광고 + ECMP 가능하지만, 홈랩 환경의 단순성을 우선.
+- **단일 IPAddressPool** — `home-pool` 하나. 서비스별 풀 분리(예: 내부/외부, 환경별) 미운영. 필요해지면 추가 IPAddressPool + label selector로 분리.
+- **FRR 모드 비활성** — BGP 전용 컴포넌트라 OFF. L2만 쓰는 한 의미 없음.
+- **스피커 leader election은 등시(equal cost)** — 어느 노드가 announce할지를 사용자가 핀하지 않음. `Service` 단위로 announce 노드가 갈리고, 노드 장애 시 다른 speaker가 인계.
+
+## 연결된 런북 / 트러블슈팅
+
+- [트러블슈팅 — LoadBalancer Service의 EXTERNAL-IP가 `<pending>`](../docs/operating/troubleshooting.md#loadbalancer-service의-external-ip가-pending)
+- [트러블슈팅 — EXTERNAL-IP는 할당됐는데 외부에서 접속 안 됨](../docs/operating/troubleshooting.md#external-ip는-할당됐는데-외부에서-접속-안-됨)
+- [개념 — 네트워크 토폴로지](../docs/concepts/network-topology.md) — IP 풀 분리 근거.
+
 ## 검증 체크리스트
 
 - [ ] `kubectl get pods -n metallb-system` — `metallb-controller`(Deployment, 1/1) + `metallb-speaker-*`(DaemonSet, 5/5 — cp 3 + wk 2) Running

@@ -35,6 +35,20 @@
 
 > **PodSecurity:** controller pod은 `baseline:latest` 기본값에 호환 (runAsNonRoot, allowPrivilegeEscalation=false, seccompProfile=RuntimeDefault, NET_BIND_SERVICE만 추가). 별도 ns 라벨링 불필요.
 
+## 한계 / 의도적으로 하지 않은 것
+
+- **HTTP only** — Ingress 리소스에 `tls:` 섹션을 두지 않는다. 외부 NPM이 edge에서 TLS 종단. 클러스터 안에서는 평문 HTTP만 흐름.
+- **cert-manager 미도입** — 클러스터 안에서 인증서를 발급할 일이 없음. 향후 mTLS / 내부 서비스간 TLS가 필요해지면 그 시점에 도입.
+- **Metrics 비활성** — 차트의 metrics endpoint를 끔. 활성화하려면 ServiceMonitor 추가 + 알람 규칙 보강 필요.
+- **`externalTrafficPolicy=Local`로 인한 트래픽 단절 위험** — 두 worker가 모두 죽으면 외부 진입이 끊긴다. cp에서는 controller pod이 안 뜨도록 anti-affinity로 막혀 있음(cp 자원 절약).
+- **단일 controller class** — 두 번째 IngressClass(예: 다른 controller)를 동시에 운영할 의도 없음. 새로 추가하면 default 충돌.
+
+## 연결된 런북 / 트러블슈팅
+
+- [트러블슈팅 — Ingress가 503 혹은 default backend 404를 반환](../docs/operating/troubleshooting.md#ingress가-503-혹은-default-backend-404를-반환)
+- [트러블슈팅 — Grafana 외부 접속이 안 되거나 redirect가 깨짐](../docs/operating/troubleshooting.md#grafana-외부-접속이-안-되거나-redirect가-깨짐) — 외부 NPM 쪽 진단 분기 포함.
+- [개념 — 외부 노출 모델](../docs/concepts/external-exposure.md) — NPM ↔ ingress-nginx 책임 분리.
+
 ## 검증 체크리스트
 
 - [ ] `kubectl get pods -n ingress-nginx` — `ingress-nginx-controller-*`(Deployment, 2/2) Running

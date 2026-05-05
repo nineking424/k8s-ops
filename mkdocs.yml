@@ -1,0 +1,99 @@
+site_name: k8s-ops
+site_description: Talos + Proxmox 기반 홈랩 Kubernetes 클러스터(talos-homelab) 운영·관리 문서
+site_url: https://k8s-ops.local/
+repo_url: https://github.com/nineking424/k8s-ops
+repo_name: nineking424/k8s-ops
+edit_uri: edit/main/docs/
+docs_dir: docs
+site_dir: site
+strict: true
+
+exclude_docs: |
+  README.md
+  CLAUDE.md
+  PLAN.md
+  .serena/
+  superpowers/
+
+theme:
+  name: readthedocs
+  language: ko
+  highlightjs: true
+  hljs_languages:
+    - bash
+    - yaml
+    - json
+    - dockerfile
+  navigation_depth: 3
+
+plugins:
+  - search
+  - mermaid2
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 3
+      slugify: !!python/object/apply:pymdownx.slugs.slugify {kwds: {case: lower}}
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:mermaid2.fence_mermaid
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.snippets
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.tasklist:
+      custom_checkbox: true
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/nineking424
+
+nav:
+  - 소개: index.md
+  - 시작하기:
+      - getting-started/index.md
+      - 일상 접근 패턴: getting-started/daily-access.md
+      - 새 컴포넌트 도입: getting-started/adding-a-component.md
+  - 개념:
+      - concepts/index.md
+      - 아키텍처: concepts/architecture.md
+      - 네트워크 토폴로지: concepts/network-topology.md
+      - 외부 노출 모델: concepts/external-exposure.md
+      - 용어집: concepts/glossary.md
+  - 컴포넌트:
+      - components/index.md
+      - node-management: components/node-management.md
+      - metrics-server: components/metrics-server.md
+      - nfs-subdir-external-provisioner: components/nfs-subdir-external-provisioner.md
+      - MetalLB: components/metallb.md
+      - ingress-nginx: components/ingress-nginx.md
+      - kube-prometheus-stack: components/kube-prometheus-stack.md
+  - 운영:
+      - operating/index.md
+      - 런북: operating/runbook.md
+      - 트러블슈팅: operating/troubleshooting.md
+      - 모니터링: operating/monitoring.md
+      - 스케일링: operating/scaling.md
+      - 업그레이드와 롤백: operating/upgrades-and-rollback.md
+  - 개발:
+      - developer/index.md
+      - 컴포넌트 추가 컨벤션: developer/contributing.md
+      - 시크릿 처리: developer/secrets.md
+      - 릴리스/업그레이드 절차: developer/release-process.md
+      - 문서 배포: developer/docs-deploy.md
+  - FAQ: faq.md

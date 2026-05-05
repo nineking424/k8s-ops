@@ -34,6 +34,20 @@ NAS의 단일 NFS export를 백엔드로 동적 PV(`StorageClass nfs-client`)를
 
 > 이 provisioner는 PVC 단계에서 `accessMode`를 검증하지 않으므로 PVC가 `ReadWriteMany`를 요청해도 PV가 정상 생성됨. NFS export 자체가 RWX를 지원하기 때문.
 
+## 한계 / 의도적으로 하지 않은 것
+
+- **단일 NFS export** — 컴포넌트별 export 분리 안 함. NAS export 자체가 망가지면 본 클러스터의 모든 PV가 동시에 영향.
+- **Snapshot / Volume Cloning 미지원** — 차트가 CSI VolumeSnapshot을 제공하지 않음. 백업은 NAS 레벨(Synology 스냅샷 / rsync)에서.
+- **reclaimPolicy=Delete + archiveOnDelete=false** — PVC 삭제 시 NFS 디렉토리도 즉시 삭제. 우발적 PVC 삭제는 데이터 분실로 이어진다 — 중요한 워크로드는 PVC에 finalizer/operator 보호 또는 NAS 측 스냅샷에 의존.
+- **Talos kubelet은 NFS 클라이언트를 자체 포함** — 별도 시스템 패키지 설치 불필요. 다만 NFSv4 강제 시 `nolock` 옵션과 충돌하는 케이스가 있어 기본은 v3.
+- **권한 분리 없음** — 모든 PVC가 같은 export 아래에 평면 디렉토리로 생성. namespace 단위 격리는 NAS 권한이 아니라 k8s API(RBAC)에서.
+
+## 연결된 런북 / 트러블슈팅
+
+- [런북 §7 — NFS 마운트 장애](../docs/operating/runbook.md#7-nfs-마운트-장애)
+- [트러블슈팅 — PVC가 Pending에서 안 넘어감](../docs/operating/troubleshooting.md#pvc가-pending에서-안-넘어감)
+- [트러블슈팅 — NFS PVC가 mount 실패 / 읽기·쓰기 IOhang](../docs/operating/troubleshooting.md#nfs-pvc가-mount-실패--읽기쓰기-iohang)
+
 ## 검증 체크리스트
 
 - [ ] `kubectl get pods -n nfs-subdir-external-provisioner` — provisioner pod이 Running, READY 1/1

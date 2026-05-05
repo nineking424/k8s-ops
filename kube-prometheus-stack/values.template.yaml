@@ -86,9 +86,9 @@ grafana:
   resources:
     requests:
       cpu: 100m
-      memory: 128Mi
-    limits:
       memory: 256Mi
+    limits:
+      memory: 1Gi
   # NPM이 HTTPS 종단 → Grafana는 외부 URL이 HTTPS임을 알아야 함(redirect/링크).
   # NPM이 X-Forwarded-Proto: https를 보내므로 이론적으론 자동 인지 가능하지만,
   # root_url을 명시해 두면 모든 경로에서 안전.
