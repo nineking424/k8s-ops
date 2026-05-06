@@ -21,14 +21,14 @@
 
 ```mermaid
 flowchart TD
-    nm[node-management<br/>scripts 01/02/03] --> cluster[talos-homelab<br/>cp 3 + wk 2]
-    cluster --> ms[metrics-server]
-    cluster --> nfs[nfs-subdir-external-provisioner<br/>SC nfs-client default]
-    cluster --> mlb[MetalLB<br/>L2, pool 192.168.3.0/24]
-    mlb --> ing[ingress-nginx<br/>LB 192.168.3.10]
-    nfs --> kps[kube-prometheus-stack]
+    nm["node-management (scripts 01/02/03)"] --> cluster["talos-homelab (cp 3 + wk 2)"]
+    cluster --> ms["metrics-server"]
+    cluster --> nfs["nfs-subdir-external-provisioner — SC nfs-client (default)"]
+    cluster --> mlb["MetalLB — L2, pool 192.168.3.0/24"]
+    mlb --> ing["ingress-nginx — LB 192.168.3.10"]
+    nfs --> kps["kube-prometheus-stack"]
     ing --> kps
-    npm[외부 NPM<br/>edge TLS] -->|*.k8s.stjeong.com<br/>HTTP forward| ing
+    npm["외부 NPM (edge TLS)"] -->|"*.k8s.stjeong.com HTTP forward"| ing
 ```
 
 - `metrics-server`는 의존 없음 — 가장 가벼운 시작점.

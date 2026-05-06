@@ -13,15 +13,15 @@
 ```mermaid
 sequenceDiagram
     participant U as 외부 사용자
-    participant NPM as 외부 NPM<br/>edge TLS
-    participant LB as MetalLB LB<br/>192.168.3.10:80
+    participant NPM as 외부 NPM (edge TLS)
+    participant LB as MetalLB LB 192.168.3.10:80
     participant ING as ingress-nginx
     participant SVC as 클러스터 Service
 
-    U->>NPM: HTTPS<br/>https://<svc>.k8s.stjeong.com
-    Note over NPM: 와일드카드 *.k8s.stjeong.com 매칭<br/>TLS 종단
-    NPM->>LB: HTTP forward<br/>Host: <svc>.k8s.stjeong.com
-    LB->>ING: L2 announce된<br/>노드로 패킷 전달
+    U->>NPM: HTTPS — https://SVC.k8s.stjeong.com
+    Note over NPM: 와일드카드 *.k8s.stjeong.com 매칭 → TLS 종단
+    NPM->>LB: HTTP forward (Host SVC.k8s.stjeong.com)
+    LB->>ING: L2 announce된 노드로 패킷 전달
     Note over ING: host/path 기반 라우팅
     ING->>SVC: cluster-internal HTTP
     SVC-->>ING: 응답

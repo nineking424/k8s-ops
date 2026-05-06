@@ -19,14 +19,14 @@
 
 ```mermaid
 flowchart LR
-    router[홈 라우터<br/>192.168.1.1]
-    pve[Proxmox pve<br/>192.168.1.3]
-    nas[NAS nknas<br/>192.168.1.4]
-    cp[cp x3<br/>192.168.2.106-108]
-    wk[wk x2<br/>192.168.2.111-112]
-    vip[cp VIP<br/>192.168.2.100]
-    lb[MetalLB pool<br/>192.168.3.0/24]
-    npm[외부 NPM]
+    router["홈 라우터 192.168.1.1"]
+    pve["Proxmox pve 192.168.1.3"]
+    nas["NAS nknas 192.168.1.4"]
+    cp["cp x3 — 192.168.2.106-108"]
+    wk["wk x2 — 192.168.2.111-112"]
+    vip["cp VIP 192.168.2.100"]
+    lb["MetalLB pool 192.168.3.0/24"]
+    npm["외부 NPM"]
 
     router --- pve
     router --- nas

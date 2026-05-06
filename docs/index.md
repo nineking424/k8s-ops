@@ -24,21 +24,21 @@
 
 ```mermaid
 flowchart LR
-    user[외부 사용자] -->|HTTPS<br/>*.k8s.stjeong.com| npm[외부 NPM<br/>edge TLS]
-    npm -->|HTTP :80| lb[MetalLB LB IP<br/>192.168.3.10]
-    lb --> ing[ingress-nginx<br/>controller]
-    ing --> svc[클러스터 Service]
+    user["외부 사용자"] -->|"HTTPS *.k8s.stjeong.com"| npm["외부 NPM (edge TLS)"]
+    npm -->|"HTTP :80"| lb["MetalLB LB 192.168.3.10"]
+    lb --> ing["ingress-nginx controller"]
+    ing --> svc["클러스터 Service"]
 
-    subgraph cluster[talos-homelab]
-        vip[CP VIP<br/>192.168.2.100]
-        cp[cp x3]
-        wk[wk x2]
-        nfs[nfs-client SC<br/>nknas:/volume1/nfsvolume]
+    subgraph cluster["talos-homelab"]
+        vip["CP VIP 192.168.2.100"]
+        cp["cp x3"]
+        wk["wk x2"]
+        nfs["nfs-client SC (nknas:/volume1/nfsvolume)"]
         ing
         svc
     end
 
-    kubectl[kubectl / talosctl] -->|:6443| vip
+    kubectl["kubectl / talosctl"] -->|":6443"| vip
     vip --- cp
     cp -.-> wk
     svc -.-> nfs
