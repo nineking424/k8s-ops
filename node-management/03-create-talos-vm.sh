@@ -169,7 +169,7 @@ if [ "$ROLE" = "cp" ]; then
   CORES=2
   DISK_SIZE=32G
 else
-  MEMORY=4096
+  MEMORY=8192
   CORES=4
   DISK_SIZE=64G
 fi

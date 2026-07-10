@@ -22,13 +22,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Talos 클러스터**: `talos-homelab` (Talos v1.13.0 / Kubernetes v1.36.0 / containerd 2.2.3 / Flannel CNI)
   - Control plane: `talos-cp-01` (192.168.2.106, VMID 106), `talos-cp-02` (192.168.2.107, VMID 107), `talos-cp-03` (192.168.2.108, VMID 108)
   - **Cluster endpoint (VIP): `192.168.2.100`** — Talos native VIP (`machine.network.interfaces[].vip`), cp 한 대가 etcd leader election으로 보유, 장애 시 자동 fail-over. kubectl/talosctl 모두 이 IP로 접근.
-  - Worker: `talos-wk-01` (192.168.2.111, VMID 111), `talos-wk-02` (192.168.2.112, VMID 112)
+  - Worker: `talos-wk-01` (192.168.2.111, VMID 111), `talos-wk-02` (192.168.2.112, VMID 112), `talos-wk-03` (192.168.2.113, VMID 113)
   - 네트워크: `192.168.0.0/16` 단일 서브넷, GW `192.168.1.1`, 노드는 `/16` 마스크 (`/24` 아님 — 라우터 DHCP 풀과 일치)
 - **kubectl context**: `admin@talos-homelab` (현재 활성)
 - **TALOSCONFIG**: 부트스트랩을 수행한 호스트(`pve`)의 `~/talos-cluster/_out/talosconfig`. 로컬에서 `talosctl`을 쓰려면 그곳에서 가져와 `export TALOSCONFIG=...` 후 사용. 같은 디렉토리에 `controlplane.yaml`, `worker.yaml`(machine config 시드)도 함께 존재.
 - **Snippets 디렉토리**: `pve:/var/lib/vz/snippets/`
   - `_talos-cp-base.yaml`, `_talos-wk-base.yaml` — 02가 배치한 역할별 base 템플릿
-  - `talos-cp-0{1,2,3}-user.yaml`, `talos-wk-0{1,2}-user.yaml` — 03이 base에서 만든 노드별 cloud-init user-data (cp는 VIP 블록 포함)
+  - `talos-cp-0{1,2,3}-user.yaml`, `talos-wk-0{1,2,3}-user.yaml` — 03이 base에서 만든 노드별 cloud-init user-data (cp는 VIP 블록 포함)
   - cloud-init은 최초 부팅에만 동작하므로, 운영 중 노드의 컨피그를 바꾸려면 해당 user.yaml을 수정 → `talosctl apply-config`로 직접 반영
 - **외부 reverse proxy / 외부 노출 도메인**: 외부망의 **nginx proxy manager**(이하 NPM)가 `*.k8s.stjeong.com` 와일드카드 호스트를 클러스터 ingress(`192.168.3.10:80`, ingress-nginx LoadBalancer)로 HTTP forward. **TLS는 NPM에서 종단**(edge termination) — 클러스터 내부는 평문 HTTP만 흐름. 컴포넌트를 외부로 노출할 때는 `<service>.k8s.stjeong.com` 호스트의 `Ingress` 리소스만 만들면 NPM이 자동으로 받아 forward(추가 NPM 설정 불필요). 따라서 **클러스터 측에는 cert-manager / DNS / TLS 설정이 필요 없음**(NPM이 모두 담당). Grafana 등 reverse-proxy aware 앱은 `root_url`/`domain`에 `https://<host>`로 외부 URL을 알려야 redirect/링크가 깨지지 않음.
 
