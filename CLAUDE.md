@@ -6,7 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 `k8s-ops`는 Proxmox + Talos로 구성된 홈랩 Kubernetes 클러스터(`talos-homelab`)의 **운영 및 관리**를 위한 작업 디렉토리입니다. 클러스터 매니페스트, 노드 프로비저닝 스크립트, 운영 가이드를 이곳에 모읍니다. 현재는 클러스터 부트스트랩이 막 끝난 상태(CRD/StorageClass 미설치)입니다 — 새 자원을 추가할 때 이 문서를 갱신하세요.
 
-이 디렉토리는 git 루트가 아닙니다. **git 루트는 상위 디렉토리 `/Users/nineking/workspace/k8s/`** 이고, 그곳에 과거에 다른 클러스터용으로 작업했던 컴포넌트별 디렉토리(`prometheus/`, `cert-manager/`, `ingress-nginx/`, `metallb/`, `minio/`, `elastic/`, `nifi/` 등)와 배포 가이드(`talos-dist/`, `elastic-dist/` 등)가 함께 들어 있습니다. 이들은 현재 클러스터에 적용된 상태가 아니므로, 재사용할 때는 매니페스트/values를 현재 클러스터 기준으로 검증한 뒤 적용해야 합니다.
+이 디렉토리는 **그 자체가 독립 git 저장소**입니다 (remote: `github.com/nineking424/k8s-ops.git`, 기본 브랜치 `main`). 이 프로젝트의 커밋/PR은 전부 이 저장소에서 이뤄집니다 — `git` 명령은 이 디렉토리 안에서 실행하세요.
+
+이 저장소는 상위 디렉토리 `/Users/nineking/workspace/k8s/`(이것도 별개의 오래된 git 저장소, remote `github.com/nineking424/k8s.git`) 안에 **중첩(nested)** 되어 있습니다. 서브모듈이 아니라, 상위 저장소 입장에서 `k8s-ops/`는 단순한 untracked 디렉토리입니다. **주의: 두 저장소는 서로 다르므로 k8s-ops 변경을 상위 저장소에 커밋하지 말 것.** 상위 저장소에는 과거에 다른 클러스터용으로 작업했던 컴포넌트별 디렉토리(`prometheus/`, `cert-manager/`, `ingress-nginx/`, `metallb/`, `minio/`, `elastic/`, `nifi/` 등)와 배포 가이드(`talos-dist/`, `elastic-dist/` 등)가 들어 있습니다. 이들은 현재 클러스터에 적용된 상태가 아니므로, 재사용할 때는 매니페스트/values를 현재 클러스터 기준으로 검증한 뒤 적용해야 합니다.
 
 ## 디렉토리 구조
 
@@ -134,7 +136,7 @@ ssh pve "talosctl --talosconfig ~/talos-cluster/_out/talosconfig --nodes 192.168
 
 스크립트 실행이나 snippets 검증이 필요할 때는 `ssh pve "<command>"` 형태로 원격 호출. 파일 전송은 `scp` 또는 `rsync`. 로컬에서 `talosctl`을 직접 쓰려면 `scp pve:~/talos-cluster/_out/talosconfig ~/.talos/config` 후 `--talosconfig` 생략 가능.
 
-## 관련 디렉토리 (상위 git 루트)
+## 관련 디렉토리 (상위의 별개 저장소)
 
 - **`../prometheus/`, `../grafana/`, `../cert-manager/`, `../ingress-nginx/`, `../metallb/`, `../minio/`, `../nfs-provisioner/`, ...** — 과거 클러스터에서 사용한 매니페스트/values. **현재 클러스터에는 미적용**이고, 챠트/CRD 버전이 달라졌을 가능성이 높습니다. 본 프로젝트로 옮길 때는 그대로 복사하지 말고 [클러스터 컴포넌트 추가](#클러스터-컴포넌트-추가) 컨벤션으로 재구성하면서 values를 다시 검증.
 - **`../*-dist/`** (`elastic-dist`, `kafka-dist`, `nifi-dist`, `oracle-12c-ee-dist`, `zookeeper-dist`) — 컴포넌트별 배포 가이드/스크립트 모음. 워크로드(애플리케이션) 성격이라 본 프로젝트(클러스터 운영)와 분리해 둠 — 옮기지 않음.
