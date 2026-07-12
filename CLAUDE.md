@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 저장소 개요
 
-`k8s-ops`는 Proxmox + Talos로 구성된 홈랩 Kubernetes 클러스터(`talos-homelab`)의 **운영 및 관리**를 위한 작업 디렉토리입니다. 클러스터 매니페스트, 노드 프로비저닝 스크립트, 운영 가이드를 이곳에 모읍니다. 현재는 클러스터 부트스트랩이 막 끝난 상태(CRD/StorageClass 미설치)입니다 — 새 자원을 추가할 때 이 문서를 갱신하세요.
+`k8s-ops`는 Proxmox + Talos로 구성된 홈랩 Kubernetes 클러스터(`talos-homelab`)의 **운영 및 관리**를 위한 작업 디렉토리입니다. 클러스터 매니페스트, 노드 프로비저닝 스크립트, 운영 가이드를 이곳에 모읍니다. 현재 코어 컴포넌트 6종(metrics-server / CP VIP / NFS StorageClass / MetalLB / ingress-nginx / kube-prometheus-stack) 도입이 완료된 운영 상태입니다 — 새 자원을 추가할 때 이 문서를 갱신하세요.
 
 이 디렉토리는 **그 자체가 독립 git 저장소**입니다 (remote: `github.com/nineking424/k8s-ops.git`, 기본 브랜치 `main`). 이 프로젝트의 커밋/PR은 전부 이 저장소에서 이뤄집니다 — `git` 명령은 이 디렉토리 안에서 실행하세요.
 
@@ -19,8 +19,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 인프라 토폴로지
 
-- **Proxmox 호스트**: `ssh pve` (192.168.1.3, root) — 단일 호스트, 모든 Talos VM이 여기서 동작
-  - `pve-mini` (192.168.1.5), `pve-main` (192.168.1.6)도 ssh config에 있으나 현재 클러스터와 무관
+- **Proxmox 호스트**: `ssh pve` (192.168.1.3, root) — 주 호스트. cp-02·cp-03·wk-01/02/03이 여기서 동작
+  - `ssh pve-main` (192.168.1.6) — `talos-cp-01`(VMID 106)이 여기서 동작. `pve-mini` (192.168.1.5)는 현재 클러스터와 무관
 - **Talos 클러스터**: `talos-homelab` (Talos v1.13.0 / Kubernetes v1.36.0 / containerd 2.2.3 / Flannel CNI)
   - Control plane: `talos-cp-01` (192.168.2.106, VMID 106), `talos-cp-02` (192.168.2.107, VMID 107), `talos-cp-03` (192.168.2.108, VMID 108)
   - **Cluster endpoint (VIP): `192.168.2.100`** — Talos native VIP (`machine.network.interfaces[].vip`), cp 한 대가 etcd leader election으로 보유, 장애 시 자동 fail-over. kubectl/talosctl 모두 이 IP로 접근.
@@ -125,7 +125,8 @@ ssh pve "cd ~/k8s-ops/node-management && bash 03-create-talos-vm.sh <VMID> <VM_N
 # 그 후 노드 ready 확인: kubectl get nodes -w
 
 # Talos OS 업그레이드 (CP는 한 번에 한 대씩, etcd 쿼럼 유지)
-ssh pve "talosctl --talosconfig ~/talos-cluster/_out/talosconfig upgrade --nodes <IP> --image ghcr.io/siderolabs/installer:<version>"
+# 이미지는 반드시 factory installer — vanilla ghcr.io/siderolabs/installer를 쓰면 qemu-guest-agent 익스텐션이 소실됨
+ssh pve "talosctl --talosconfig ~/talos-cluster/_out/talosconfig upgrade --nodes <IP> --image factory.talos.dev/installer/ce4c980550dd2ab1b17bbf2b08801c7eb59418eafe8f279833297925d67c7515:<version>"
 
 # Kubernetes 업그레이드
 ssh pve "talosctl --talosconfig ~/talos-cluster/_out/talosconfig upgrade-k8s --nodes <CP_IP> --to <k8s-version>"
@@ -152,7 +153,7 @@ ssh pve "talosctl --talosconfig ~/talos-cluster/_out/talosconfig --nodes 192.168
 
 ## 권장 도입 순서
 
-부트스트랩 직후 상태(CRD/StorageClass 미설치)라 클러스터 레벨 자원이 모두 비어 있습니다. 운영자 결정에 따라 아래 순서로 도입합니다.
+부트스트랩 직후 비어 있던 클러스터에 운영자 결정에 따라 아래 순서로 도입했습니다 — 현재 1~6번 모두 도입 완료.
 
 | 순서 | 컴포넌트 | 구현 / 핵심 설정 | 의존 / 근거 |
 |---|---|---|---|
