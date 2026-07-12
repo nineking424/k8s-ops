@@ -16,6 +16,4 @@ kubeconfig
 PLAN.md
 *.bak
 
-# mkdocs 빌드 산출물 (gh-pages 브랜치에 publish)
-site/
 .serena/

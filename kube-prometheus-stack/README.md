@@ -56,11 +56,11 @@
 
 ## 연결된 런북 / 트러블슈팅
 
-- [모니터링](../docs/operating/monitoring.md) — 진입점/대시보드/알람 카탈로그.
-- [트러블슈팅 — Prometheus가 disk full](../docs/operating/troubleshooting.md#prometheus가-disk-full)
-- [트러블슈팅 — Grafana 외부 접속이 안 되거나 redirect가 깨짐](../docs/operating/troubleshooting.md#grafana-외부-접속이-안-되거나-redirect가-깨짐)
-- [트러블슈팅 — node-exporter pod이 일부 노드에서 안 뜸](../docs/operating/troubleshooting.md#node-exporter-pod이-일부-노드에서-안-뜸)
-- [업그레이드와 롤백 — Helm 차트 업그레이드](../docs/operating/upgrades-and-rollback.md#helm-차트-업그레이드) — CRD 갱신 절차 포함.
+- [모니터링](https://github.com/nineking424/k8s-ops/wiki/Operating-Monitoring) — 진입점/대시보드/알람 카탈로그.
+- [트러블슈팅 — Prometheus가 disk full](https://github.com/nineking424/k8s-ops/wiki/Operating-Troubleshooting#prometheus가-disk-full)
+- [트러블슈팅 — Grafana 외부 접속이 안 되거나 redirect가 깨짐](https://github.com/nineking424/k8s-ops/wiki/Operating-Troubleshooting#grafana-외부-접속이-안-되거나-redirect가-깨짐)
+- [트러블슈팅 — node-exporter pod이 일부 노드에서 안 뜸](https://github.com/nineking424/k8s-ops/wiki/Operating-Troubleshooting#node-exporter-pod이-일부-노드에서-안-뜸)
+- [업그레이드와 롤백 — Helm 차트 업그레이드](https://github.com/nineking424/k8s-ops/wiki/Operating-Upgrades-And-Rollback#helm-차트-업그레이드) — CRD 갱신 절차 포함.
 
 ## Grafana 접속
 

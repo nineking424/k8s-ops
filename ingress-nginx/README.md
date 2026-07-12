@@ -45,9 +45,9 @@
 
 ## 연결된 런북 / 트러블슈팅
 
-- [트러블슈팅 — Ingress가 503 혹은 default backend 404를 반환](../docs/operating/troubleshooting.md#ingress가-503-혹은-default-backend-404를-반환)
-- [트러블슈팅 — Grafana 외부 접속이 안 되거나 redirect가 깨짐](../docs/operating/troubleshooting.md#grafana-외부-접속이-안-되거나-redirect가-깨짐) — 외부 NPM 쪽 진단 분기 포함.
-- [개념 — 외부 노출 모델](../docs/concepts/external-exposure.md) — NPM ↔ ingress-nginx 책임 분리.
+- [트러블슈팅 — Ingress가 503 혹은 default backend 404를 반환](https://github.com/nineking424/k8s-ops/wiki/Operating-Troubleshooting#ingress가-503-혹은-default-backend-404를-반환)
+- [트러블슈팅 — Grafana 외부 접속이 안 되거나 redirect가 깨짐](https://github.com/nineking424/k8s-ops/wiki/Operating-Troubleshooting#grafana-외부-접속이-안-되거나-redirect가-깨짐) — 외부 NPM 쪽 진단 분기 포함.
+- [개념 — 외부 노출 모델](https://github.com/nineking424/k8s-ops/wiki/Concepts-External-Exposure) — NPM ↔ ingress-nginx 책임 분리.
 
 ## 검증 체크리스트
 
