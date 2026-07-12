@@ -1,0 +1,19 @@
+services:
+  pve-watchdog:
+    build: .
+    image: pve-watchdog
+    container_name: pve-watchdog
+    restart: unless-stopped       # 맥 재부팅/Docker 재시작 시 자동 복귀
+    env_file: .env                # TAPO_EMAIL / TAPO_PASSWORD (git 제외)
+    environment:
+      PVE_HOST: "192.168.1.3"     # 헬스체크 대상
+      TAPO_HOST: "192.168.150.226" # "Main Rack" P110 = pve 전원
+      CHECK_INTERVAL: "120"       # 점검 주기(초)
+      FAIL_THRESHOLD: "10"        # 연속 실패 → 120s×10 = 20분 무응답 시 발동
+      COOLDOWN_SEC: "1800"        # 재발동 최소 간격(30분) — 콜드부팅보다 길게: 짧으면 부팅 중 재차단(실측)
+      MAX_PER_DAY: "3"            # 일일 최대 power cycle (하드웨어 고장 시 무한루프 방지)
+      OFF_WAIT_SEC: "60"          # off→on 대기(60초) — 10초는 보드 standby 안 빠져 자동전원On 실패(실측)
+      WOL_MAC: "22:40:6c:07:02:22" # 안전망: on 후 standby 멈춤 대비 WoL 매직패킷
+      # DRY_RUN: "1"              # 1이면 실제 전원제어 대신 로그만
+    volumes:
+      - ./data:/data             # state.json 영속화 (git 제외)
