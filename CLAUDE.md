@@ -25,7 +25,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 아래 [클러스터 컴포넌트 추가](#클러스터-컴포넌트-추가) 폴더 컨벤션은 **첫 번째 범주에만** 적용됩니다.
 
 - **`node-management/`** — Talos 노드 프로비저닝/관리 스크립트와 가이드. `01-gen-talos-config.sh`(클러스터 시크릿/CA + 머신컨피그 발급, 절대 재실행 금지), `02-place-base-snippets.sh`(`_out/` → snippets/에 base 배치, 멱등), `03-create-talos-vm.sh`(노드별 VM 생성, cp는 VIP 자동 삽입), `node-management-guide.md`(부트스트랩·노드 추가·업그레이드·etcd 백업·트러블슈팅 종합 가이드). 자세한 내용은 [노드 관리](#노드-관리-node-management) 섹션 참고.
-- **`pve-watchdog/`** — pve 외부 하드웨어 워치독. 클러스터 자원이 아니라 **클러스터 밖에서 도는 별개 프로세스**이므로, 죽어 있어도 클러스터 쪽에서는 알 수 없습니다. 상태 확인은 `docker ps` / `docker logs` 또는 `data/state.json`의 갱신 시각(정상이면 120초 이내)으로 합니다.
+- **`pve-watchdog/`** — pve 외부 하드웨어 워치독. 클러스터 자원이 아니라 **클러스터 밖에서 도는 별개 프로세스**이므로, 죽어 있어도 클러스터 쪽에서는 알 수 없습니다. 도는 곳은 상시 가동 맥 `nkmini`(192.168.1.7)이고, **그곳이 바로 이 저장소가 놓인 장비**입니다("로컬" = "상시 가동 맥").
+
+  > **살아있는지 반드시 확인하세요.** 가장 빠른 방법은 `pve-watchdog/data/state.json`의 **mtime**입니다 — 정상이면 매 루프(120초)마다 갱신됩니다. 몇 시간 이상 멈춰 있으면 워치독이 죽은 것이고, 그동안 **pve는 자가복구 수단이 전혀 없습니다**(iTCO는 BIOS NO_REBOOT 봉인으로 실제 리셋을 못 함 — 2026-05-29 실검증). 컨테이너 상태는 `docker ps --filter name=pve-watchdog`, 로그는 `docker logs pve-watchdog`. Docker 데몬 자체가 행이면 `docker` 명령이 타임아웃하므로, 그때는 Docker Desktop 재시작이 필요합니다.
 
 ## 인프라 토폴로지
 
