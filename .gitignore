@@ -1,5 +1,5 @@
-# values.yaml 은 시크릿 포함 가능 — 컴포넌트별로 명시 추적 (현재 metrics-server는 시크릿 없으나 컨벤션 유지)
-**/values.yaml
+# values.yaml 은 helm 이 실제로 먹는 파일이므로 추적한다 (CONTEXT.md "권위 있는 사본" 참조).
+# 시크릿이 실제로 필요한 컴포넌트가 생기면 그 컴포넌트만 여기에 명시적으로 추가할 것.
 
 # OS / editor 잡파일
 .DS_Store
@@ -15,5 +15,3 @@ kubeconfig
 # 작업 부산물
 PLAN.md
 *.bak
-
-.serena/

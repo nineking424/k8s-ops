@@ -15,13 +15,8 @@ cd "${SCRIPT_DIR}"
 
 # values 파일 점검
 if [[ ! -f values.yaml ]]; then
-  echo "ERROR: values.yaml 없음. values.template.yaml을 복사해 만드세요." >&2
+  echo "ERROR: values.yaml 없음. 저장소에서 누락되었는지 확인하세요." >&2
   exit 1
-fi
-
-# 시크릿 없는 컴포넌트지만 컨벤션 유지 — template과 values가 어긋나면 경고
-if ! diff -q values.template.yaml values.yaml > /dev/null 2>&1; then
-  echo "WARN: values.template.yaml 과 values.yaml 이 어긋남. 의도한 변경인지 확인하세요." >&2
 fi
 
 # helm repo 등록 (이미 있으면 update)
