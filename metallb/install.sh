@@ -17,12 +17,8 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "${SCRIPT_DIR}"
 
 if [[ ! -f values.yaml ]]; then
-  echo "ERROR: values.yaml 없음. values.template.yaml을 복사해 만드세요." >&2
+  echo "ERROR: values.yaml 없음. 저장소에서 누락되었는지 확인하세요." >&2
   exit 1
-fi
-
-if ! diff -q values.template.yaml values.yaml > /dev/null 2>&1; then
-  echo "WARN: values.template.yaml 과 values.yaml 이 어긋남. 의도한 변경인지 확인하세요." >&2
 fi
 
 if ! helm repo list 2>/dev/null | awk '{print $1}' | grep -qx "${REPO_NAME}"; then

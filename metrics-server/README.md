@@ -36,8 +36,8 @@ Talos kubelet은 self-signed serving 인증서를 사용하므로 metrics-server
 
 ## 연결된 런북 / 트러블슈팅
 
-- [트러블슈팅 — node가 NotReady로 떨어짐](../docs/operating/troubleshooting.md#node가-notready로-떨어짐) — `kubectl top`이 비어 있거나 일부 노드만 안 보일 때 1차 확인.
-- [모니터링 — 활성 ServiceMonitor 카탈로그](../docs/operating/monitoring.md#활성--비활성-servicemonitor) — kubelet 메트릭은 Prometheus가 별도로 다시 받아간다.
+- [트러블슈팅 — node가 NotReady로 떨어짐](https://github.com/nineking424/k8s-ops/wiki/Operating-Troubleshooting#node가-notready로-떨어짐) — `kubectl top`이 비어 있거나 일부 노드만 안 보일 때 1차 확인.
+- [모니터링 — 활성 ServiceMonitor 카탈로그](https://github.com/nineking424/k8s-ops/wiki/Operating-Monitoring#활성--비활성-servicemonitor) — kubelet 메트릭은 Prometheus가 별도로 다시 받아간다.
 
 ## 검증 체크리스트
 

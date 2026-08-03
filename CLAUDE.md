@@ -4,31 +4,45 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 저장소 개요
 
-`k8s-ops`는 Proxmox + Talos로 구성된 홈랩 Kubernetes 클러스터(`talos-homelab`)의 **운영 및 관리**를 위한 작업 디렉토리입니다. 클러스터 매니페스트, 노드 프로비저닝 스크립트, 운영 가이드를 이곳에 모읍니다. 현재는 클러스터 부트스트랩이 막 끝난 상태(CRD/StorageClass 미설치)입니다 — 새 자원을 추가할 때 이 문서를 갱신하세요.
+`k8s-ops`는 Proxmox + Talos로 구성된 홈랩 Kubernetes 클러스터(`talos-homelab`)의 **운영 및 관리**를 위한 작업 디렉토리입니다. 클러스터 매니페스트, 노드 프로비저닝 스크립트, 운영 가이드를 이곳에 모읍니다. 현재 코어 컴포넌트 6종(metrics-server / CP VIP / NFS StorageClass / MetalLB / ingress-nginx / kube-prometheus-stack) 도입이 완료된 운영 상태입니다 — 새 자원을 추가할 때 이 문서를 갱신하세요.
 
-이 디렉토리는 git 루트가 아닙니다. **git 루트는 상위 디렉토리 `/Users/nineking/workspace/k8s/`** 이고, 그곳에 과거에 다른 클러스터용으로 작업했던 컴포넌트별 디렉토리(`prometheus/`, `cert-manager/`, `ingress-nginx/`, `metallb/`, `minio/`, `elastic/`, `nifi/` 등)와 배포 가이드(`talos-dist/`, `elastic-dist/` 등)가 함께 들어 있습니다. 이들은 현재 클러스터에 적용된 상태가 아니므로, 재사용할 때는 매니페스트/values를 현재 클러스터 기준으로 검증한 뒤 적용해야 합니다.
+이 디렉토리는 **그 자체가 독립 git 저장소**입니다 (remote: `github.com/nineking424/k8s-ops.git`, 기본 브랜치 `main`). 이 프로젝트의 커밋/PR은 전부 이 저장소에서 이뤄집니다 — `git` 명령은 이 디렉토리 안에서 실행하세요.
+
+이 저장소는 상위 디렉토리 `/Users/nineking/workspace/k8s/`(이것도 별개의 오래된 git 저장소, remote `github.com/nineking424/k8s.git`) 안에 **중첩(nested)** 되어 있습니다. 서브모듈이 아니라, 상위 저장소 입장에서 `k8s-ops/`는 단순한 untracked 디렉토리입니다. **주의: 두 저장소는 서로 다르므로 k8s-ops 변경을 상위 저장소에 커밋하지 말 것.** 상위 저장소에는 과거에 다른 클러스터용으로 작업했던 컴포넌트별 디렉토리(`prometheus/`, `cert-manager/`, `ingress-nginx/`, `metallb/`, `minio/`, `elastic/`, `nifi/` 등)와 배포 가이드(`talos-dist/`, `elastic-dist/` 등)가 들어 있습니다. 이들은 현재 클러스터에 적용된 상태가 아니므로, 재사용할 때는 매니페스트/values를 현재 클러스터 기준으로 검증한 뒤 적용해야 합니다.
+
+> **용어는 [`CONTEXT.md`](./CONTEXT.md)에 정의되어 있습니다.** `pve`/`pve-main`/`pve-mini`/`nkmini`, VIP와 LB IP, factory installer, 컴포넌트의 세 범주 등 — 혼동이 실제 사고로 이어졌던 축들입니다. 이 문서를 읽기 전에 훑어보세요.
 
 ## 디렉토리 구조
 
-본 프로젝트는 **노드 관리**(`node-management/`)와 **클러스터 컴포넌트**(`<component>/`)를 평면적으로 나란히 두는 구조입니다. 새로 도입하는 컴포넌트는 각자 폴더를 가지며, 폴더 안 컨벤션은 [클러스터 컴포넌트 추가](#클러스터-컴포넌트-추가) 섹션 참조.
+본 프로젝트의 폴더는 평면적으로 나란히 놓이지만 **성격이 셋으로 갈립니다.** 실행 위치·배포 방식·검증 방법이 모두 다르므로 같은 "컴포넌트"로 뭉뚱그리지 마세요 (정의는 [`CONTEXT.md`](./CONTEXT.md)).
+
+| 범주 | 대상 | 실행 위치 | 배포 | 검증 |
+|---|---|---|---|---|
+| **컴포넌트** | `metrics-server/` `nfs-subdir-external-provisioner/` `metallb/` `ingress-nginx/` `kube-prometheus-stack/` | 클러스터 안 | Helm (`install.sh` + `values.yaml`) | `kubectl get pods -n <ns>` |
+| **노드 프로비저닝** | `node-management/` | PVE 호스트에서 root | bash `01`/`02`/`03` | `qm list` / `talosctl` |
+| **클러스터 외 운영도구** | `pve-watchdog/` | 상시 가동 맥의 Docker | docker compose | `docker logs` — **`kubectl`에 안 보임** |
+
+아래 [클러스터 컴포넌트 추가](#클러스터-컴포넌트-추가) 폴더 컨벤션은 **첫 번째 범주에만** 적용됩니다.
 
 - **`node-management/`** — Talos 노드 프로비저닝/관리 스크립트와 가이드. `01-gen-talos-config.sh`(클러스터 시크릿/CA + 머신컨피그 발급, 절대 재실행 금지), `02-place-base-snippets.sh`(`_out/` → snippets/에 base 배치, 멱등), `03-create-talos-vm.sh`(노드별 VM 생성, cp는 VIP 자동 삽입), `node-management-guide.md`(부트스트랩·노드 추가·업그레이드·etcd 백업·트러블슈팅 종합 가이드). 자세한 내용은 [노드 관리](#노드-관리-node-management) 섹션 참고.
-- **`<component>/` (예정)** — 클러스터 레벨 컴포넌트별 폴더. 도입 우선순위는 [권장 도입 순서](#권장-도입-순서) 섹션 참조 (StorageClass / LoadBalancer / Ingress / cert-manager / metric-server / 관측성 등).
+- **`pve-watchdog/`** — pve 외부 하드웨어 워치독. 클러스터 자원이 아니라 **클러스터 밖에서 도는 별개 프로세스**이므로, 죽어 있어도 클러스터 쪽에서는 알 수 없습니다. 도는 곳은 상시 가동 맥 `nkmini`(192.168.1.7)이고, **그곳이 바로 이 저장소가 놓인 장비**입니다("로컬" = "상시 가동 맥").
+
+  > **살아있는지 반드시 확인하세요.** 가장 빠른 방법은 `pve-watchdog/data/state.json`의 **mtime**입니다 — 정상이면 매 루프(120초)마다 갱신됩니다. 몇 시간 이상 멈춰 있으면 워치독이 죽은 것이고, 그동안 **pve는 자가복구 수단이 전혀 없습니다**(iTCO는 BIOS NO_REBOOT 봉인으로 실제 리셋을 못 함 — 2026-05-29 실검증). 컨테이너 상태는 `docker ps --filter name=pve-watchdog`, 로그는 `docker logs pve-watchdog`. Docker 데몬 자체가 행이면 `docker` 명령이 타임아웃하므로, 그때는 Docker Desktop 재시작이 필요합니다.
 
 ## 인프라 토폴로지
 
-- **Proxmox 호스트**: `ssh pve` (192.168.1.3, root) — 단일 호스트, 모든 Talos VM이 여기서 동작
-  - `pve-mini` (192.168.1.5), `pve-main` (192.168.1.6)도 ssh config에 있으나 현재 클러스터와 무관
+- **Proxmox 호스트**: `ssh pve` (192.168.1.3, root) — 주 호스트. cp-02·cp-03·wk-01/02/03이 여기서 동작
+  - `ssh pve-main` (192.168.1.6) — `talos-cp-01`(VMID 106)이 여기서 동작. `pve-mini` (192.168.1.5)는 현재 클러스터와 무관
 - **Talos 클러스터**: `talos-homelab` (Talos v1.13.0 / Kubernetes v1.36.0 / containerd 2.2.3 / Flannel CNI)
   - Control plane: `talos-cp-01` (192.168.2.106, VMID 106), `talos-cp-02` (192.168.2.107, VMID 107), `talos-cp-03` (192.168.2.108, VMID 108)
   - **Cluster endpoint (VIP): `192.168.2.100`** — Talos native VIP (`machine.network.interfaces[].vip`), cp 한 대가 etcd leader election으로 보유, 장애 시 자동 fail-over. kubectl/talosctl 모두 이 IP로 접근.
-  - Worker: `talos-wk-01` (192.168.2.111, VMID 111), `talos-wk-02` (192.168.2.112, VMID 112)
+  - Worker: `talos-wk-01` (192.168.2.111, VMID 111), `talos-wk-02` (192.168.2.112, VMID 112), `talos-wk-03` (192.168.2.113, VMID 113)
   - 네트워크: `192.168.0.0/16` 단일 서브넷, GW `192.168.1.1`, 노드는 `/16` 마스크 (`/24` 아님 — 라우터 DHCP 풀과 일치)
-- **kubectl context**: `admin@talos-homelab` (현재 활성)
+- **kubectl context**: **둘이 있고 둘 다 같은 클러스터**입니다 — `admin@talos-homelab`(VIP 직접, `https://192.168.2.100:6443`)와 `talos-tunnel`(`https://localhost:16443`, `nkmini` 192.168.1.7 경유 상시 SSH 터널 `ssh -L 16443:192.168.2.100:6443`). **현재 활성은 `talos-tunnel`**. LAN 안에서는 둘 다 동작하므로 어느 쪽인지 모른 채 명령이 성공합니다 — 경로가 중요한 작업(터널 끊김 진단 등) 전에 `kubectl config current-context`로 확인하세요.
 - **TALOSCONFIG**: 부트스트랩을 수행한 호스트(`pve`)의 `~/talos-cluster/_out/talosconfig`. 로컬에서 `talosctl`을 쓰려면 그곳에서 가져와 `export TALOSCONFIG=...` 후 사용. 같은 디렉토리에 `controlplane.yaml`, `worker.yaml`(machine config 시드)도 함께 존재.
 - **Snippets 디렉토리**: `pve:/var/lib/vz/snippets/`
   - `_talos-cp-base.yaml`, `_talos-wk-base.yaml` — 02가 배치한 역할별 base 템플릿
-  - `talos-cp-0{1,2,3}-user.yaml`, `talos-wk-0{1,2}-user.yaml` — 03이 base에서 만든 노드별 cloud-init user-data (cp는 VIP 블록 포함)
+  - `talos-cp-0{1,2,3}-user.yaml`, `talos-wk-0{1,2,3}-user.yaml` — 03이 base에서 만든 노드별 cloud-init user-data (cp는 VIP 블록 포함)
   - cloud-init은 최초 부팅에만 동작하므로, 운영 중 노드의 컨피그를 바꾸려면 해당 user.yaml을 수정 → `talosctl apply-config`로 직접 반영
 - **외부 reverse proxy / 외부 노출 도메인**: 외부망의 **nginx proxy manager**(이하 NPM)가 `*.k8s.stjeong.com` 와일드카드 호스트를 클러스터 ingress(`192.168.3.10:80`, ingress-nginx LoadBalancer)로 HTTP forward. **TLS는 NPM에서 종단**(edge termination) — 클러스터 내부는 평문 HTTP만 흐름. 컴포넌트를 외부로 노출할 때는 `<service>.k8s.stjeong.com` 호스트의 `Ingress` 리소스만 만들면 NPM이 자동으로 받아 forward(추가 NPM 설정 불필요). 따라서 **클러스터 측에는 cert-manager / DNS / TLS 설정이 필요 없음**(NPM이 모두 담당). Grafana 등 reverse-proxy aware 앱은 `root_url`/`domain`에 `https://<host>`로 외부 URL을 알려야 redirect/링크가 깨지지 않음.
 
@@ -65,8 +79,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 <component>/
 ├── README.md           # 무엇을 / 왜 / 의존성 / 적용 후 검증 방법
 ├── install.sh          # helm upgrade --install 또는 kubectl apply 한 번으로 끝나는 진입점
-├── values.template.yaml # (Helm) 시크릿 placeholder만 있는 Git 추적 템플릿
-├── values.yaml         # (Helm) 실제 값. 시크릿이 들어가면 .gitignore
+├── values.yaml         # (Helm) 실제 값. helm이 먹는 파일이자 Git 추적 대상 — 이 둘은 같은 파일이어야 함
 └── *.yaml              # 추가 매니페스트 (Issuer, IPAddressPool, StorageClass 등)
 ```
 
@@ -79,9 +92,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### 시크릿 처리
 
-기본 원칙: `values.yaml`은 시크릿(토큰/비번/인증서)이 포함되면 **로컬 전용**으로 두고 Git에 안 올림. 대신 `values.template.yaml`을 placeholder(`<DOCKERHUB_TOKEN>`, `<CLOUDFLARE_API_TOKEN>` 등)로 채워 커밋. `install.sh` 상단에서 두 파일이 어긋날 때 경고.
+기본 원칙: **`values.yaml`은 Git으로 추적합니다.** helm이 실제로 먹는 파일이 곧 형상관리 대상이어야, 값을 고쳤을 때 `git diff`에 잡히고 저장소만으로 클러스터를 재현할 수 있습니다.
 
-더 정교한 흐름이 필요해지면(여러 사람이 만지거나 GitOps 도입) **sealed-secrets / external-secrets / SOPS** 중 하나로 일원화. 현재는 단일 운영자 환경이라 template/values 분리만으로 충분.
+현재 5개 컴포넌트 전부 시크릿이 없습니다 — Grafana admin 비밀번호조차 차트가 생성해 k8s Secret에 넣습니다(`kubectl get secret -n monitoring kube-prometheus-stack-grafana -o jsonpath='{.data.admin-password}' | base64 -d`).
+
+> 과거에는 `values.template.yaml`(placeholder, Git 추적) / `values.yaml`(실값, gitignore) 분리를 썼으나 폐기했습니다. 5쌍 전부 내용이 동일하고 placeholder가 하나도 없어 **지키는 것이 없으면서**, git이 추적하는 파일이 배포본이 아니라는 모순만 만들었기 때문입니다.
+
+시크릿이 실제로 필요한 컴포넌트가 생기면 **그 컴포넌트만** `.gitignore`에 명시적으로 추가하거나, GitOps 도입과 함께 **sealed-secrets / external-secrets / SOPS** 중 하나로 일원화합니다. 전체에 미리 컨벤션을 걸지는 않습니다.
 
 ### 설치 후 체크리스트
 
@@ -123,7 +140,8 @@ ssh pve "cd ~/k8s-ops/node-management && bash 03-create-talos-vm.sh <VMID> <VM_N
 # 그 후 노드 ready 확인: kubectl get nodes -w
 
 # Talos OS 업그레이드 (CP는 한 번에 한 대씩, etcd 쿼럼 유지)
-ssh pve "talosctl --talosconfig ~/talos-cluster/_out/talosconfig upgrade --nodes <IP> --image ghcr.io/siderolabs/installer:<version>"
+# 이미지는 반드시 factory installer — vanilla ghcr.io/siderolabs/installer를 쓰면 qemu-guest-agent 익스텐션이 소실됨
+ssh pve "talosctl --talosconfig ~/talos-cluster/_out/talosconfig upgrade --nodes <IP> --image factory.talos.dev/installer/ce4c980550dd2ab1b17bbf2b08801c7eb59418eafe8f279833297925d67c7515:<version>"
 
 # Kubernetes 업그레이드
 ssh pve "talosctl --talosconfig ~/talos-cluster/_out/talosconfig upgrade-k8s --nodes <CP_IP> --to <k8s-version>"
@@ -134,7 +152,7 @@ ssh pve "talosctl --talosconfig ~/talos-cluster/_out/talosconfig --nodes 192.168
 
 스크립트 실행이나 snippets 검증이 필요할 때는 `ssh pve "<command>"` 형태로 원격 호출. 파일 전송은 `scp` 또는 `rsync`. 로컬에서 `talosctl`을 직접 쓰려면 `scp pve:~/talos-cluster/_out/talosconfig ~/.talos/config` 후 `--talosconfig` 생략 가능.
 
-## 관련 디렉토리 (상위 git 루트)
+## 관련 디렉토리 (상위의 별개 저장소)
 
 - **`../prometheus/`, `../grafana/`, `../cert-manager/`, `../ingress-nginx/`, `../metallb/`, `../minio/`, `../nfs-provisioner/`, ...** — 과거 클러스터에서 사용한 매니페스트/values. **현재 클러스터에는 미적용**이고, 챠트/CRD 버전이 달라졌을 가능성이 높습니다. 본 프로젝트로 옮길 때는 그대로 복사하지 말고 [클러스터 컴포넌트 추가](#클러스터-컴포넌트-추가) 컨벤션으로 재구성하면서 values를 다시 검증.
 - **`../*-dist/`** (`elastic-dist`, `kafka-dist`, `nifi-dist`, `oracle-12c-ee-dist`, `zookeeper-dist`) — 컴포넌트별 배포 가이드/스크립트 모음. 워크로드(애플리케이션) 성격이라 본 프로젝트(클러스터 운영)와 분리해 둠 — 옮기지 않음.
@@ -150,7 +168,7 @@ ssh pve "talosctl --talosconfig ~/talos-cluster/_out/talosconfig --nodes 192.168
 
 ## 권장 도입 순서
 
-부트스트랩 직후 상태(CRD/StorageClass 미설치)라 클러스터 레벨 자원이 모두 비어 있습니다. 운영자 결정에 따라 아래 순서로 도입합니다.
+부트스트랩 직후 비어 있던 클러스터에 운영자 결정에 따라 아래 순서로 도입했습니다 — 현재 1~6번 모두 도입 완료.
 
 | 순서 | 컴포넌트 | 구현 / 핵심 설정 | 의존 / 근거 |
 |---|---|---|---|
@@ -170,4 +188,4 @@ ssh pve "talosctl --talosconfig ~/talos-cluster/_out/talosconfig --nodes 192.168
 - **cert-manager** — TLS 자동화 (Let's Encrypt 등 ACME). HTTPS로 외부에 노출할 서비스가 생기면 도입. ACME HTTP-01은 Ingress(5번) 의존, DNS-01은 DNS 프로바이더 API 토큰 필요. 도입 전엔 자체 서명 인증서나 HTTP만으로 운영.
 - **GitOps (ArgoCD / Flux)** — 컴포넌트 5~6개 넘어가서 수동 `helm/kubectl` 흐름이 부담스러워지면. [클러스터 컴포넌트 추가](#클러스터-컴포넌트-추가) 컨벤션이 그대로 매핑되도록 폴더 구조를 잡아두었음.
 - **백업 (Velero)** — etcd 외에 PV 데이터까지 백업이 필요해지면. 현재는 NAS의 NFS export 자체를 NAS 레벨에서 백업하는 것으로 갈음 가능.
-- **Sealed-Secrets / External-Secrets / SOPS** — 시크릿 관리가 `values.yaml` 로컬 분리 수준을 넘어서거나 GitOps 도입과 함께.
+- **Sealed-Secrets / External-Secrets / SOPS** — 시크릿이 실제로 필요한 컴포넌트(cert-manager DNS-01 토큰, Alertmanager receiver webhook 등)가 생기거나 GitOps 도입과 함께. 현재는 시크릿이 없어 `values.yaml`을 그대로 추적합니다.

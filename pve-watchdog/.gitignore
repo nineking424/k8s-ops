@@ -1,0 +1,5 @@
+# secrets / runtime — never commit
+.env
+data/
+state.json
+credentials.json

@@ -45,9 +45,9 @@
 
 ## 연결된 런북 / 트러블슈팅
 
-- [트러블슈팅 — LoadBalancer Service의 EXTERNAL-IP가 `<pending>`](../docs/operating/troubleshooting.md#loadbalancer-service의-external-ip가-pending)
-- [트러블슈팅 — EXTERNAL-IP는 할당됐는데 외부에서 접속 안 됨](../docs/operating/troubleshooting.md#external-ip는-할당됐는데-외부에서-접속-안-됨)
-- [개념 — 네트워크 토폴로지](../docs/concepts/network-topology.md) — IP 풀 분리 근거.
+- [트러블슈팅 — LoadBalancer Service의 EXTERNAL-IP가 `<pending>`](https://github.com/nineking424/k8s-ops/wiki/Operating-Troubleshooting#loadbalancer-service의-external-ip가-pending)
+- [트러블슈팅 — EXTERNAL-IP는 할당됐는데 외부에서 접속 안 됨](https://github.com/nineking424/k8s-ops/wiki/Operating-Troubleshooting#external-ip는-할당됐는데-외부에서-접속-안-됨)
+- [개념 — 네트워크 토폴로지](https://github.com/nineking424/k8s-ops/wiki/Concepts-Network-Topology) — IP 풀 분리 근거.
 
 ## 검증 체크리스트
 

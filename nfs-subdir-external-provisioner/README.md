@@ -44,9 +44,9 @@ NAS의 단일 NFS export를 백엔드로 동적 PV(`StorageClass nfs-client`)를
 
 ## 연결된 런북 / 트러블슈팅
 
-- [런북 §7 — NFS 마운트 장애](../docs/operating/runbook.md#7-nfs-마운트-장애)
-- [트러블슈팅 — PVC가 Pending에서 안 넘어감](../docs/operating/troubleshooting.md#pvc가-pending에서-안-넘어감)
-- [트러블슈팅 — NFS PVC가 mount 실패 / 읽기·쓰기 IOhang](../docs/operating/troubleshooting.md#nfs-pvc가-mount-실패--읽기쓰기-iohang)
+- [런북 §7 — NFS 마운트 장애](https://github.com/nineking424/k8s-ops/wiki/Operating-Runbook#7-nfs-마운트-장애)
+- [트러블슈팅 — PVC가 Pending에서 안 넘어감](https://github.com/nineking424/k8s-ops/wiki/Operating-Troubleshooting#pvc가-pending에서-안-넘어감)
+- [트러블슈팅 — NFS PVC가 mount 실패 / 읽기·쓰기 IOhang](https://github.com/nineking424/k8s-ops/wiki/Operating-Troubleshooting#nfs-pvc가-mount-실패--읽기쓰기-iohang)
 
 ## 검증 체크리스트
 
