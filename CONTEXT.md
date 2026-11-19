@@ -27,7 +27,7 @@ _Avoid_: "리버스 프록시"(클러스터 안의 ingress-nginx 도 리버스 �
 스마트플러그 P110(`192.168.150.226`, 레이블 "Main Rack"). pve 의 **전원 그 자체**다. 클러스터 외 운영도구가 이것을 끊어 pve 를 강제 재부팅한다.
 
 **nkmini**:
-맥(`192.168.1.7`, `nkmini.local`). Proxmox 가 아니라 **클러스터 밖의 상시 가동 맥**이고, `k8s-ops` 저장소가 놓인 곳이며, 클러스터 외 운영도구(pve-watchdog)가 도는 곳이다. `~/.ssh/config` 에 별칭이 없어 IP 로만 등장한다. **이 저장소를 다루는 작업은 보통 이 장비 위에서 일어난다** — 즉 "로컬"과 "상시 가동 맥"은 같은 것이다.
+맥(`192.168.1.7`, `nkmini.local`). Proxmox 가 아니라 **클러스터 밖의 상시 가동 맥**이고, `k8s-ops` 저장소가 놓인 곳이며, 클러스터 외 운영도구(pve-watchdog, kube-tunnel)가 도는 곳이다. `~/.ssh/config` 에 별칭이 없어 IP 로만 등장한다. **이 저장소를 다루는 작업은 보통 이 장비 위에서 일어난다** — 즉 "로컬"과 "상시 가동 맥"은 같은 것이다.
 _Avoid_: pve-mini(`192.168.1.5`)와 혼동. 이름만 비슷할 뿐 전혀 다른 장비다.
 
 이 장비가 홈랩의 **감시자 겸 단일 장애점**이다. pve 가 죽었을 때 전원을 끊어 살리는 주체가 여기 하나뿐이라, 여기의 Docker 가 멈추면 **pve 는 자가복구 수단이 전혀 없는 상태로 돌아간다.** 그 사실이 클러스터 쪽 어디에도 나타나지 않는다.
@@ -35,13 +35,13 @@ _Avoid_: pve-mini(`192.168.1.5`)와 혼동. 이름만 비슷할 뿐 전혀 다�
 ## 노드 층
 
 **talos-homelab**:
-클러스터 이름. kubectl context 는 **`admin@talos-homelab` 하나**이며 VIP 로 직접(`https://192.168.2.100:6443`) 붙는다. 과거의 `talos-tunnel` context(`localhost:16443` → nkmini 경유 SSH 터널)는 2026-11-19 제거했다 — nkmini 자신에서는 자기에게 SSH 해 VIP 로 나가는 우회일 뿐이었고, 상시 기동 장치도 없어 조용히 끊겨 있었다. SSH 세션과 GUI Terminal 양쪽에서 VIP 직접 접속을 실측 확인했다.
+클러스터 이름. kubectl context 는 **둘**이며 둘 다 같은 클러스터를 가리킨다 — `admin@talos-homelab` 은 VIP 로 직접(`https://192.168.2.100:6443`), `talos-tunnel` 은 nkmini 의 kube-tunnel 컨테이너를 거쳐(`https://localhost:16443`) 붙는다. **기본은 `talos-tunnel`** 이다 — macOS 15 "로컬 네트워크" 보호가 kubectl 을 실행한 앱에 권한이 없으면 LAN 접속을 막으므로, LAN 구간을 Docker Desktop 에 맡긴다. 어느 경로로 명령이 성공했는지 모르면 착각하기 쉬우므로 `kubectl config current-context` 로 확인한다.
 
 **cp / wk**:
 노드 역할. cp 는 control plane(`talos-cp-01..03`, `192.168.2.106..108`), wk 는 worker(`talos-wk-01..03`, `192.168.2.111..113`). `03-create-talos-vm.sh` 의 4번째 인자가 이 역할이며, cp 일 때만 VIP 블록이 자동 삽입된다.
 
 **VIP**:
-`192.168.2.100`. Talos native VIP 로, cp 한 대가 etcd leader election 으로 보유하고 장애 시 자동 fail-over 한다. 클러스터 API 의 **단일 주소**이며, 개별 cp 노드 IP 로 붙지 않는다.
+`192.168.2.100`. Talos native VIP 로, cp 한 대가 etcd leader election 으로 보유하고 장애 시 자동 fail-over 한다. 클러스터 API 의 **단일 주소**이며, 개별 cp 노드 IP 로 붙지 않는다(`talos-tunnel` context 도 결국 이 주소로 포워딩된다).
 _Avoid_: 스크립트마다 이름이 다르지만 `CLUSTER_VIP`(01), `CP_VIP`(03), 머신컨피그의 `vip.ip`, 문서의 "cluster endpoint" 는 **전부 이 하나**를 가리킨다. 서로 다른 것으로 읽지 말 것.
 
 **노드 대역 / LB 풀**:
@@ -64,7 +64,7 @@ _Avoid_: 저장소의 모든 폴더를 컴포넌트라 부르는 것. 아래 둘
 `node-management/` 의 bash 3종(`01`/`02`/`03`). **PVE 호스트에서 root 로** 실행되며 로컬 macOS 에서는 돌지 않는다. `qm` 과 `talosctl` 로 검증한다.
 
 **클러스터 외 운영도구**:
-`pve-watchdog/`. **상시 가동 맥의 Docker** 에서 도는 compose 서비스로, pve 를 헬스체크하다 20분 무응답이면 Tapo 로 전원을 끊는다. 쿠버네티스 자원이 아니므로 **`kubectl` 에 전혀 보이지 않는다** — 죽어 있어도 클러스터 쪽에서는 알 수 없고, `docker logs` 로만 확인된다.
+**상시 가동 맥의 Docker** 에서 도는 compose 서비스. `pve-watchdog/` 은 pve 를 헬스체크하다 20분 무응답이면 Tapo 로 전원을 끊고, `kube-tunnel/` 은 kubectl 용으로 `localhost:16443` 을 VIP 로 포워딩한다. 쿠버네티스 자원이 아니므로 **`kubectl` 에 전혀 보이지 않는다** — 죽어 있어도 클러스터 쪽에서는 알 수 없고, `docker ps`/`docker logs` 로만 확인된다. Docker Desktop 이 멈추면 둘이 같이 멈춘다.
 
 **워크로드**:
 클러스터에서 도는, **k8s-ops 가 관리하지 않는** 모든 것. 각자의 앱 저장소(`~/workspace/app/*`)가 매니페스트를 갖고 있으며, 이 저장소는 목록도 유지하지 않는다. 어떤 네임스페이스를 다루기 전에 그 출처를 **먼저 확인해야 한다** — 2026-08-01 에 `ftp` 의 100Gi 데이터가 출처(`~/workspace/app/k8s-ftp`)를 확인하지 않은 채 삭제됐다.

@@ -1,0 +1,14 @@
+services:
+  kube-tunnel:
+    image: alpine/socat:1.8.0.3     # 버전 고정
+    container_name: kube-tunnel
+    restart: unless-stopped         # 맥 재부팅/Docker 재시작 시 자동 복귀
+    ports:
+      - "127.0.0.1:16443:16443"     # loopback 에만 — LAN 에 API 포트를 다시 노출하지 않음
+    # TCP 그대로 전달 — TLS 는 kubectl ↔ apiserver 가 직접 맺는다(kubeconfig tls-server-name=192.168.2.100)
+    command: ["tcp-listen:16443,fork,reuseaddr", "tcp:192.168.2.100:6443"]
+    healthcheck:                    # VIP 도달성 — docker ps 에 (unhealthy) 로 드러난다
+      test: ["CMD", "nc", "-z", "-w", "3", "192.168.2.100", "6443"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
