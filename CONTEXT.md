@@ -35,13 +35,13 @@ _Avoid_: pve-mini(`192.168.1.5`)와 혼동. 이름만 비슷할 뿐 전혀 다�
 ## 노드 층
 
 **talos-homelab**:
-클러스터 이름. kubectl context 는 **둘**이며 둘 다 같은 클러스터를 가리킨다 — `admin@talos-homelab` 은 VIP 로 직접(`https://192.168.2.100:6443`), `talos-tunnel` 은 nkmini 를 경유하는 상시 SSH 터널로(`https://localhost:16443`) 붙는다. **현재 활성은 `talos-tunnel`** 이다. LAN 안에서는 둘 다 동작하므로, 어느 쪽이 활성인지 모른 채 명령이 성공하면 경로를 착각하기 쉽다.
+클러스터 이름. kubectl context 는 **`admin@talos-homelab` 하나**이며 VIP 로 직접(`https://192.168.2.100:6443`) 붙는다. 과거의 `talos-tunnel` context(`localhost:16443` → nkmini 경유 SSH 터널)는 2026-11-19 제거했다 — nkmini 자신에서는 자기에게 SSH 해 VIP 로 나가는 우회일 뿐이었고, 상시 기동 장치도 없어 조용히 끊겨 있었다. SSH 세션과 GUI Terminal 양쪽에서 VIP 직접 접속을 실측 확인했다.
 
 **cp / wk**:
 노드 역할. cp 는 control plane(`talos-cp-01..03`, `192.168.2.106..108`), wk 는 worker(`talos-wk-01..03`, `192.168.2.111..113`). `03-create-talos-vm.sh` 의 4번째 인자가 이 역할이며, cp 일 때만 VIP 블록이 자동 삽입된다.
 
 **VIP**:
-`192.168.2.100`. Talos native VIP 로, cp 한 대가 etcd leader election 으로 보유하고 장애 시 자동 fail-over 한다. 클러스터 API 의 **단일 주소**이며, 개별 cp 노드 IP 로 붙지 않는다(`talos-tunnel` context 도 결국 이 주소로 포워딩된다).
+`192.168.2.100`. Talos native VIP 로, cp 한 대가 etcd leader election 으로 보유하고 장애 시 자동 fail-over 한다. 클러스터 API 의 **단일 주소**이며, 개별 cp 노드 IP 로 붙지 않는다.
 _Avoid_: 스크립트마다 이름이 다르지만 `CLUSTER_VIP`(01), `CP_VIP`(03), 머신컨피그의 `vip.ip`, 문서의 "cluster endpoint" 는 **전부 이 하나**를 가리킨다. 서로 다른 것으로 읽지 말 것.
 
 **노드 대역 / LB 풀**:

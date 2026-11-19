@@ -38,7 +38,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   - **Cluster endpoint (VIP): `192.168.2.100`** — Talos native VIP (`machine.network.interfaces[].vip`), cp 한 대가 etcd leader election으로 보유, 장애 시 자동 fail-over. kubectl/talosctl 모두 이 IP로 접근.
   - Worker: `talos-wk-01` (192.168.2.111, VMID 111), `talos-wk-02` (192.168.2.112, VMID 112), `talos-wk-03` (192.168.2.113, VMID 113)
   - 네트워크: `192.168.0.0/16` 단일 서브넷, GW `192.168.1.1`, 노드는 `/16` 마스크 (`/24` 아님 — 라우터 DHCP 풀과 일치)
-- **kubectl context**: **둘이 있고 둘 다 같은 클러스터**입니다 — `admin@talos-homelab`(VIP 직접, `https://192.168.2.100:6443`)와 `talos-tunnel`(`https://localhost:16443`, `nkmini` 192.168.1.7 경유 상시 SSH 터널 `ssh -L 16443:192.168.2.100:6443`). **현재 활성은 `talos-tunnel`**. LAN 안에서는 둘 다 동작하므로 어느 쪽인지 모른 채 명령이 성공합니다 — 경로가 중요한 작업(터널 끊김 진단 등) 전에 `kubectl config current-context`로 확인하세요.
+- **kubectl context**: `admin@talos-homelab` 하나 — VIP 직접(`https://192.168.2.100:6443`). 예전 `talos-tunnel`(`localhost:16443` SSH 터널) context는 2026-11-19 제거했습니다(nkmini 자신에서는 불필요한 우회였고 상시 기동 장치도 없었음). 만약 어떤 GUI 앱에서 VIP 접속이 `no route to host`로 막히면 macOS 15 "로컬 네트워크" 권한(시스템 설정 → 개인정보 보호 및 보안 → 로컬 네트워크)을 먼저 의심하세요.
 - **TALOSCONFIG**: 부트스트랩을 수행한 호스트(`pve`)의 `~/talos-cluster/_out/talosconfig`. 로컬에서 `talosctl`을 쓰려면 그곳에서 가져와 `export TALOSCONFIG=...` 후 사용. 같은 디렉토리에 `controlplane.yaml`, `worker.yaml`(machine config 시드)도 함께 존재.
 - **Snippets 디렉토리**: `pve:/var/lib/vz/snippets/`
   - `_talos-cp-base.yaml`, `_talos-wk-base.yaml` — 02가 배치한 역할별 base 템플릿
