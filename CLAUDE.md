@@ -20,7 +20,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 |---|---|---|---|---|
 | **컴포넌트** | `metrics-server/` `nfs-subdir-external-provisioner/` `metallb/` `ingress-nginx/` `kube-prometheus-stack/` | 클러스터 안 | Helm (`install.sh` + `values.yaml`) | `kubectl get pods -n <ns>` |
 | **노드 프로비저닝** | `node-management/` | PVE 호스트에서 root | bash `01`/`02`/`03` | `qm list` / `talosctl` |
-| **클러스터 외 운영도구** | `pve-watchdog/` | 상시 가동 맥의 Docker | docker compose | `docker logs` — **`kubectl`에 안 보임** |
+| **클러스터 외 운영도구** | `pve-watchdog/` `kube-tunnel/` | 상시 가동 맥의 Docker | docker compose | `docker logs` — **`kubectl`에 안 보임** |
 
 아래 [클러스터 컴포넌트 추가](#클러스터-컴포넌트-추가) 폴더 컨벤션은 **첫 번째 범주에만** 적용됩니다.
 
@@ -28,6 +28,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **`pve-watchdog/`** — pve 외부 하드웨어 워치독. 클러스터 자원이 아니라 **클러스터 밖에서 도는 별개 프로세스**이므로, 죽어 있어도 클러스터 쪽에서는 알 수 없습니다. 도는 곳은 상시 가동 맥 `nkmini`(192.168.1.7)이고, **그곳이 바로 이 저장소가 놓인 장비**입니다("로컬" = "상시 가동 맥").
 
   > **살아있는지 반드시 확인하세요.** 가장 빠른 방법은 `pve-watchdog/data/state.json`의 **mtime**입니다 — 정상이면 매 루프(120초)마다 갱신됩니다. 몇 시간 이상 멈춰 있으면 워치독이 죽은 것이고, 그동안 **pve는 자가복구 수단이 전혀 없습니다**(iTCO는 BIOS NO_REBOOT 봉인으로 실제 리셋을 못 함 — 2026-05-29 실검증). 컨테이너 상태는 `docker ps --filter name=pve-watchdog`, 로그는 `docker logs pve-watchdog`. Docker 데몬 자체가 행이면 `docker` 명령이 타임아웃하므로, 그때는 Docker Desktop 재시작이 필요합니다.
+
+- **`kube-tunnel/`** — kubectl용 localhost 포워더(socat 컨테이너, `127.0.0.1:16443` → VIP `192.168.2.100:6443`). 기본 context `talos-tunnel`이 여기로 붙습니다. 컨테이너가 죽으면 기본 `kubectl`이 `localhost:16443 connection refused`로 실패합니다 — `docker ps --filter name=kube-tunnel`(healthy 여야 함). 왜 필요한지는 `kube-tunnel/README.md`.
 
 ## 인프라 토폴로지
 
@@ -38,7 +40,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   - **Cluster endpoint (VIP): `192.168.2.100`** — Talos native VIP (`machine.network.interfaces[].vip`), cp 한 대가 etcd leader election으로 보유, 장애 시 자동 fail-over. kubectl/talosctl 모두 이 IP로 접근.
   - Worker: `talos-wk-01` (192.168.2.111, VMID 111), `talos-wk-02` (192.168.2.112, VMID 112), `talos-wk-03` (192.168.2.113, VMID 113)
   - 네트워크: `192.168.0.0/16` 단일 서브넷, GW `192.168.1.1`, 노드는 `/16` 마스크 (`/24` 아님 — 라우터 DHCP 풀과 일치)
-- **kubectl context**: `admin@talos-homelab` 하나 — VIP 직접(`https://192.168.2.100:6443`). 예전 `talos-tunnel`(`localhost:16443` SSH 터널) context는 2026-11-19 제거했습니다(nkmini 자신에서는 불필요한 우회였고 상시 기동 장치도 없었음). 만약 어떤 GUI 앱에서 VIP 접속이 `no route to host`로 막히면 macOS 15 "로컬 네트워크" 권한(시스템 설정 → 개인정보 보호 및 보안 → 로컬 네트워크)을 먼저 의심하세요.
+- **kubectl context**: **둘이 있고 둘 다 같은 클러스터**입니다 — `admin@talos-homelab`(VIP 직접, `https://192.168.2.100:6443`)와 `talos-tunnel`(`https://localhost:16443`, [`kube-tunnel/`](./kube-tunnel/) socat 컨테이너 경유). **기본(활성)은 `talos-tunnel`**. 이유: macOS 15 "로컬 네트워크" 보호는 kubectl을 **실행한 앱**의 권한으로 LAN 접속을 판정하므로(Terminal/SSH에서 직접 돌리면 면제, GUI 앱·launchd agent가 띄우면 그 권한을 따름) 권한 없는 앱에서는 VIP 직접 접속이 막힙니다. LAN 구간을 Docker Desktop에 맡기면 어디서 돌든 localhost만 거칩니다. (2026-11-19: 예전 수동 ssh 터널이 조용히 끊겨 있던 것을 발견 → 직접 방식으로 바꿨다가 이 문제로 되돌리고 컨테이너로 상시화.) 경로가 중요한 작업 전에는 `kubectl config current-context`로 확인하세요.
 - **TALOSCONFIG**: 부트스트랩을 수행한 호스트(`pve`)의 `~/talos-cluster/_out/talosconfig`. 로컬에서 `talosctl`을 쓰려면 그곳에서 가져와 `export TALOSCONFIG=...` 후 사용. 같은 디렉토리에 `controlplane.yaml`, `worker.yaml`(machine config 시드)도 함께 존재.
 - **Snippets 디렉토리**: `pve:/var/lib/vz/snippets/`
   - `_talos-cp-base.yaml`, `_talos-wk-base.yaml` — 02가 배치한 역할별 base 템플릿
